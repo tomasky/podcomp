@@ -1,0 +1,9 @@
+import {
+  "kupas/podcomp",
+  "moonbitlang/async",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "+native"
+
+pkgtype(kind: "executable")

@@ -1,0 +1,314 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "kupas/podcomp"
+
+import {
+  "moonbit-community/yaml",
+}
+
+// Values
+pub fn abspath(String) -> String
+
+pub fn apply_merge_keys(@yaml.Yaml) -> @yaml.Yaml
+
+pub fn ascii_lower(String) -> String
+
+pub async fn assert_networks(Compose, Podman, @yaml.Yaml) -> Unit
+
+pub async fn assert_volumes(Compose, Podman, @yaml.Yaml) -> Unit
+
+pub async fn cmd_build(Compose, Podman, CommandArgs) -> Int
+
+pub fn cmd_config(Compose, CommandArgs) -> Unit
+
+pub async fn cmd_down(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_exec(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_images(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_kill(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_logs(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_pause_unpause(Compose, Podman, CommandArgs, String) -> Int
+
+pub async fn cmd_port(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_ps(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_pull(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_restart(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_rm(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_run(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_start(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_stop(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_up(Compose, Podman, CommandArgs) -> Int
+
+pub async fn cmd_version(Podman, CommandArgs) -> Unit
+
+pub fn compose_labels(Compose) -> Array[String]
+
+pub fn config_hash(Compose, @yaml.Yaml) -> String
+
+pub fn container_networks(Compose, @yaml.Yaml) -> Map[String, @yaml.Yaml]
+
+pub fn container_to_args(Compose, @yaml.Yaml, Bool, Bool) -> Array[String] raise
+
+pub fn current_dir() -> String
+
+pub let default_compose_files : Array[String]
+
+pub fn dotenv_to_dict(String) -> Map[String, String]
+
+pub fn error_text(Error) -> String
+
+pub fn fail(String) -> PodCompError
+
+pub fn format_name(Compose, Array[String]) -> String
+
+pub fn home_dir() -> String
+
+pub fn interp_str(String, Map[String, String]) -> String raise
+
+pub fn is_git_url(String) -> Bool
+
+pub fn join_name_parts(Compose, Array[String]) -> String
+
+pub async fn load_compose(GlobalOptions) -> Compose
+
+pub async fn main_cli() -> Unit
+
+pub fn mount_args(Compose, @yaml.Yaml, @yaml.Yaml) -> Array[String]
+
+pub fn mount_target_of(@yaml.Yaml) -> String?
+
+pub fn network_args(Compose, @yaml.Yaml) -> Array[String]
+
+pub fn network_name(Compose, String) -> String
+
+pub fn new_command_args() -> CommandArgs
+
+pub fn new_compose() -> Compose
+
+pub fn new_global_options() -> GlobalOptions
+
+pub fn new_podman(GlobalOptions) -> Podman
+
+pub fn normalize_depends(@yaml.Yaml) -> @yaml.Yaml
+
+pub fn parse_dotenv(String) -> Map[String, String]
+
+pub fn parse_short_mount(String, String) -> Mount
+
+pub fn path_abspath(String, String) -> String
+
+pub fn path_basename(String) -> String
+
+pub fn path_dirname(String) -> String
+
+pub fn path_expand_home(String) -> String
+
+pub fn path_join(String, String) -> String
+
+pub fn path_normalize(String) -> String
+
+pub fn podman_argv(Podman, String, Array[String]) -> Array[String]
+
+pub async fn podman_available(Podman) -> Bool
+
+pub async fn podman_output(Podman, String, Array[String]) -> String
+
+pub async fn podman_run(Podman, String, Array[String]) -> Int
+
+pub async fn podman_try_output(Podman, String, Array[String]) -> String?
+
+pub async fn podman_version(Podman) -> String?
+
+pub fn print_help() -> Unit
+
+pub fn rec_merge(Map[String, @yaml.Yaml], Map[String, @yaml.Yaml]) -> Unit raise
+
+pub fn rec_subs(@yaml.Yaml, Map[String, String]) -> @yaml.Yaml raise
+
+pub fn resolve_pod_args(Compose, String?) -> Array[String]
+
+pub fn resolve_pod_name(Compose, String?) -> String?
+
+pub fn resolve_volume_name(Compose, @yaml.Yaml, String, String) -> String
+
+pub fn shell_split(String) -> Array[String]
+
+pub fn short_mount_target(String) -> String?
+
+pub fn simple_hash(String) -> String
+
+pub fn str_to_seconds(String) -> Int?
+
+pub fn try_int_str(String) -> Int?
+
+pub let version : String
+
+pub fn version_at_least(String, String) -> Bool
+
+pub fn y_arr(@yaml.Yaml) -> Array[@yaml.Yaml]?
+
+pub fn y_arr_v(Array[@yaml.Yaml]) -> @yaml.Yaml
+
+pub fn y_bool(@yaml.Yaml) -> Bool?
+
+pub fn y_bool_v(Bool) -> @yaml.Yaml
+
+pub fn y_clone(@yaml.Yaml) -> @yaml.Yaml
+
+pub fn y_dict(@yaml.Yaml) -> Map[String, @yaml.Yaml]
+
+pub fn y_dump(@yaml.Yaml) -> String
+
+pub fn y_env_list(@yaml.Yaml) -> Array[String]
+
+pub fn y_get(@yaml.Yaml, String) -> @yaml.Yaml?
+
+pub fn y_int(@yaml.Yaml) -> Int?
+
+pub fn y_int_v(Int) -> @yaml.Yaml
+
+pub fn y_list(@yaml.Yaml) -> Array[@yaml.Yaml]
+
+pub fn y_list_str(@yaml.Yaml) -> Array[String]
+
+pub fn y_map(@yaml.Yaml) -> Map[String, @yaml.Yaml]?
+
+pub fn y_map_v(Map[String, @yaml.Yaml]) -> @yaml.Yaml
+
+pub fn y_null() -> @yaml.Yaml
+
+pub fn y_obj(Array[(String, @yaml.Yaml)]) -> @yaml.Yaml
+
+pub fn y_str(@yaml.Yaml) -> String?
+
+pub fn y_str_or(@yaml.Yaml, String) -> String
+
+pub fn y_str_v(String) -> @yaml.Yaml
+
+// Errors
+pub(all) suberror PodCompError {
+  PodCompError(String)
+}
+
+// Types and methods
+pub struct CommandArgs {
+  services : Array[String]
+  mut detach : Bool
+  mut no_deps : Bool
+  mut no_build : Bool
+  mut build : Bool
+  mut force_recreate : Bool
+  mut no_recreate : Bool
+  mut no_start : Bool
+  mut volumes : Bool
+  mut remove_orphans : Bool
+  mut rmi : String?
+  mut timeout : Int?
+  mut follow : Bool
+  mut tail : String?
+  mut since : String?
+  mut until : String?
+  mut timestamps : Bool
+  mut names : Bool
+  mut no_color : Bool
+  mut no_log_prefix : Bool
+  mut quiet : Bool
+  mut format : String?
+  mut short : Bool
+  mut signal : String?
+  mut all : Bool
+  mut index : Int
+  mut protocol : String
+  mut private_port : Int
+  mut no_cache : Bool
+  mut pull : String?
+  build_arg : Array[String]
+  mut quiet_pull : Bool
+  mut wait : Bool
+  mut wait_timeout : Int?
+  mut name : String?
+  mut entrypoint : String?
+  env : Array[String]
+  mut user : String?
+  mut workdir : String?
+  mut rm : Bool
+  publish : Array[String]
+  mut service_ports : Bool
+  volume : Array[String]
+  mut no_tty : Bool
+  mut privileged : Bool
+  mut force_local : Bool
+  mut services_flag : Bool
+  mut no_normalize : Bool
+  pull_always : Bool
+  mut abort_on_container_exit : Bool
+  mut abort_on_container_failure : Bool
+  mut exit_code_from : String?
+  no_attach : Array[String]
+  mut scale : String?
+  mut renew_anon_volumes : Bool
+  mut no_hosts : Bool
+  cnt_command : Array[String]
+}
+
+pub struct Compose {
+  mut project_name : String
+  mut dirname : String
+  mut files : Array[String]
+  mut environ : Map[String, String]
+  mut services : Map[String, @yaml.Yaml]
+  mut deps : Map[String, Array[String]]
+  mut container_names_by_service : Map[String, Array[String]]
+  mut containers : Array[@yaml.Yaml]
+  mut container_by_name : Map[String, @yaml.Yaml]
+  mut networks : Map[String, @yaml.Yaml]
+  mut vols : Map[String, @yaml.Yaml]
+  mut declared_secrets : Map[String, @yaml.Yaml]
+  mut default_net : String?
+  mut pods : Array[String]
+  mut merged_yaml : @yaml.Yaml
+  mut x_podman : Map[String, @yaml.Yaml]
+  podman_version : String?
+  mut pod_args : Array[String]
+}
+
+pub struct GlobalOptions {
+  files : Array[String]
+  mut project_name : String?
+  profiles : Array[String]
+  env_files : Array[String]
+  mut podman_path : String
+  mut dry_run : Bool
+  mut verbose : Bool
+  mut no_ansi : Bool
+  mut no_cleanup : Bool
+  mut in_pod : String?
+  mut pod_args : String?
+  podman_args : Array[String]
+  podman_cmd_args : Map[String, Array[String]]
+}
+
+type Mount
+
+pub struct Podman {
+  path : String
+  dry_run : Bool
+  verbose : Bool
+  global_args : Array[String]
+  cmd_args : Map[String, Array[String]]
+}
+
+// Type aliases
+
+// Traits

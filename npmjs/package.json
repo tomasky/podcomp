@@ -1,0 +1,44 @@
+{
+  "name": "@tomasko/podcomp",
+  "version": "0.1.1",
+  "description": "Run Compose files with Podman , a single native binary, no daemon, no Python.",
+  "license": "Apache-2.0",
+  "bin": {
+    "podcomp": "bin/podcomp.js"
+  },
+  "files": [
+    "bin/podcomp.js",
+    "lib.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tomasky/podcomp.git"
+  },
+  "homepage": "https://github.com/tomasky/podcomp",
+  "bugs": "https://github.com/tomasky/podcomp/issues",
+  "keywords": [
+    "podman",
+    "docker-compose",
+    "compose",
+    "containers",
+    "orchestration",
+    "cli",
+    "moonbit"
+  ],
+  "preferGlobal": true
+}
