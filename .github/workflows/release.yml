@@ -65,60 +65,14 @@ jobs:
       - name: Update registry index
         run: moon update
 
-      # The MoonBit runtime's arm64 simdutf.o is compiled against glibc
-      # headers and references `__memcpy_chk`; musl provides no `*_chk`
-      # fortify symbols, so link a small shim supplying them.
-      - name: Build fortify shim (glibc *_chk for musl)
-        if: matrix.musl
-        run: |
-          mkdir -p /tmp/podcomp-cc
-          cat > /tmp/podcomp-cc/fortify_shim.c <<'EOF'
-          #include <string.h>
-          #include <stdarg.h>
-          #include <stdio.h>
-          void *__memcpy_chk(void *d, const void *s, size_t n, size_t dn) { (void)dn; return memcpy(d, s, n); }
-          void *__memmove_chk(void *d, const void *s, size_t n, size_t dn) { (void)dn; return memmove(d, s, n); }
-          void *__memset_chk(void *d, int c, size_t n, size_t dn) { (void)dn; return memset(d, c, n); }
-          char *__strcpy_chk(char *d, const char *s, size_t dn) { (void)dn; return strcpy(d, s); }
-          char *__stpcpy_chk(char *d, const char *s, size_t dn) { (void)dn; return stpcpy(d, s); }
-          char *__strcat_chk(char *d, const char *s, size_t dn) { (void)dn; return strcat(d, s); }
-          char *__strncpy_chk(char *d, const char *s, size_t n, size_t dn) { (void)dn; return strncpy(d, s, n); }
-          char *__strncat_chk(char *d, const char *s, size_t n, size_t dn) { (void)dn; return strncat(d, s, n); }
-          int __sprintf_chk(char *s, int flag, size_t slen, const char *fmt, ...) { (void)flag; (void)slen; va_list ap; va_start(ap, fmt); int r = vsprintf(s, fmt, ap); va_end(ap); return r; }
-          int __vsprintf_chk(char *s, int flag, size_t slen, const char *fmt, va_list ap) { (void)flag; (void)slen; return vsprintf(s, fmt, ap); }
-          int __snprintf_chk(char *s, size_t n, int flag, size_t slen, const char *fmt, ...) { (void)flag; (void)slen; va_list ap; va_start(ap, fmt); int r = vsnprintf(s, n, fmt, ap); va_end(ap); return r; }
-          int __vsnprintf_chk(char *s, size_t n, int flag, size_t slen, const char *fmt, va_list ap) { (void)flag; (void)slen; return vsnprintf(s, n, fmt, ap); }
-          int __printf_chk(int flag, const char *fmt, ...) { (void)flag; va_list ap; va_start(ap, fmt); int r = vprintf(fmt, ap); va_end(ap); return r; }
-          int __vprintf_chk(int flag, const char *fmt, va_list ap) { (void)flag; return vprintf(fmt, ap); }
-          int __fprintf_chk(FILE *f, int flag, const char *fmt, ...) { (void)flag; va_list ap; va_start(ap, fmt); int r = vfprintf(f, fmt, ap); va_end(ap); return r; }
-          int __vfprintf_chk(FILE *f, int flag, const char *fmt, va_list ap) { (void)flag; return vfprintf(f, fmt, ap); }
-          EOF
-          musl-gcc -O2 -c /tmp/podcomp-cc/fortify_shim.c -o /tmp/podcomp-cc/fortify_shim.o
-          ar rcs /tmp/podcomp-cc/libpodcompfortify.a /tmp/podcomp-cc/fortify_shim.o
-
-      # MOON_CC drives both the compile and the link step. The wrapper adds
-      # `-static`, and `moon` looks for `ar` next to the compiler driver, so
-      # the wrapper directory gets a symlink to the system `ar`. Link
-      # invocations also get the fortify shim; compile invocations (`-c`) are
-      # passed through untouched.
+      # `moonbitlang/async`'s native sources include the kernel UAPI headers
+      # (`linux/fs.h`, `linux/version.h`) and need `NAME_MAX`; the script's
+      # compiler driver adds `-idirafter /usr/include` and `-include limits.h`
+      # so musl-gcc can find them. It also links the glibc fortify `*_chk`
+      # shim the MoonBit runtime references.
       - name: Build (static musl, release)
         if: matrix.musl
-        run: |
-          cat > /tmp/podcomp-cc/podcomp-musl-gcc <<'EOF'
-          #!/bin/sh
-          for arg in "$@"; do
-            if [ "$arg" = "-c" ]; then
-              exec musl-gcc "$@"
-            fi
-          done
-          exec musl-gcc "$@" -static -L/tmp/podcomp-cc -lpodcompfortify
-          EOF
-          chmod +x /tmp/podcomp-cc/podcomp-musl-gcc
-          ln -sf "$(command -v ar)" /tmp/podcomp-cc/ar
-          MOON_CC=/tmp/podcomp-cc/podcomp-musl-gcc MOON_AR=ar moon build --target native --release
-          mkdir -p dist
-          cp _build/native/release/build/cmd/main/main.exe "dist/podcomp-${{ matrix.target }}"
-          chmod 755 "dist/podcomp-${{ matrix.target }}"
+        run: ./scripts/build-linux-static.sh "dist/podcomp-${{ matrix.target }}"
 
       - name: Build (release)
         if: ${{ !matrix.musl }}

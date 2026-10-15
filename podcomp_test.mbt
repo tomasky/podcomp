@@ -4,10 +4,9 @@
 
 ///|
 test "the version is a semantic version" {
-  let v = @podcomp.version
-  let parts = v.split(".")
+  let parts = @podcomp.version.split(".").to_array()
   assert_eq(parts.length(), 3)
   for part in parts {
-    assert_true(part.length() > 0)
+    assert_false(part.is_empty())
   }
 }
