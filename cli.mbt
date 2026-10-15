@@ -512,7 +512,7 @@ async fn dispatch(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   match command {
     "config" => {
       cmd_config(compose, args)

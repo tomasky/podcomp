@@ -61,7 +61,7 @@ pub async fn podman_run(
   podman : Podman,
   cmd : String,
   args : Array[String],
-) -> Int {
+) -> Int32 {
   let argv = podman_argv(podman, cmd, args)
   log_command(podman, argv)
   if podman.dry_run {

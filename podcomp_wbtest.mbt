@@ -106,3 +106,45 @@ test "normalize_project_name keeps only the accepted characters" {
   assert_eq(normalize_project_name("My App!"), "MyApp")
   assert_eq(normalize_project_name("a_b-c.d"), "a_b-c.d")
 }
+
+///|
+test "container_mounts parses every volumes entry" {
+  let compose = new_compose()
+  compose.dirname = "/srv/app"
+  let cnt = y_obj([
+    (
+      "volumes",
+      y_arr_v([
+        y_str_v("./html:/usr/share/nginx/html:ro"),
+        y_str_v("pgdata:/var/lib/data"),
+        y_str_v("/data"),
+      ]),
+    ),
+  ])
+  let mounts = container_mounts(compose, cnt)
+  assert_eq(mounts.length(), 3)
+  assert_eq(mounts[0].kind, "bind")
+  assert_eq(mounts[0].source, Some("/srv/app/html"))
+  assert_eq(mounts[1].kind, "volume")
+  assert_eq(mounts[1].source, Some("pgdata"))
+  assert_eq(mounts[2].kind, "volume")
+  assert_eq(mounts[2].source, None)
+}
+
+///|
+test "compose_env_file reads each path once" {
+  let path = "/tmp/podcomp_env_cache_test.env"
+  @fs.write_string_to_file(path, "A=1\n") catch {
+    _ => return
+  }
+  let compose = new_compose()
+  assert_eq(compose_env_file(compose, path).get("A"), Some("1"))
+  // The parsed map is cached, so rewriting the file is not observed.
+  @fs.write_string_to_file(path, "A=2\n") catch {
+    _ => ()
+  }
+  assert_eq(compose_env_file(compose, path).get("A"), Some("1"))
+  @fs.remove_file(path) catch {
+    _ => ()
+  }
+}

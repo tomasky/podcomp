@@ -3,13 +3,23 @@
 /// syntax has to be unpacked before podman sees it.
 
 ///|
-/// Translate one `volumes` entry into podman arguments.
-pub fn mount_args(
+/// Every mount of a container, parsed once so the args builder and the
+/// volume-creation pass share the same work.
+pub fn container_mounts(compose : Compose, cnt : @yaml.Yaml) -> Array[Mount] {
+  let out : Array[Mount] = []
+  for volume in y_list(y_get(cnt, "volumes").unwrap_or(y_null())) {
+    out.push(parse_mount(compose, cnt, volume))
+  }
+  out
+}
+
+///|
+/// Translate one parsed mount into podman arguments.
+pub fn mount_arg(
   compose : Compose,
   cnt : @yaml.Yaml,
-  volume : @yaml.Yaml,
+  mount : Mount,
 ) -> Array[String] {
-  let mount = parse_mount(compose, cnt, volume)
   let args : Array[String] = []
   match mount.kind {
     "bind" =>
@@ -453,158 +463,196 @@ pub fn container_networks(
 }
 
 ///|
-/// Create the networks a container joins, unless they already exist.
-pub async fn assert_networks(
+
+///|
+/// Ensure every network and named volume the given containers need exists.
+///
+/// The probes are deduplicated by name: a project with N containers on one
+/// network, or N services sharing one volume, pays one `podman network exists`
+/// / `podman volume inspect` instead of one per container.
+pub async fn assert_networks_and_volumes(
   compose : Compose,
   podman : Podman,
-  cnt : @yaml.Yaml,
+  containers : Array[@yaml.Yaml],
 ) -> Unit raise Error {
-  match y_get(cnt, "network_mode") {
-    Some(_) => return
-    None => ()
-  }
-  for entry in container_networks(compose, cnt) {
-    let (net, _cfg) = entry
-    let name = network_name(compose, net)
-    match podman_try_output(podman, "network", ["exists", name]) {
+  let nets : Map[String, Unit] = Map([])
+  let vols : Map[String, Unit] = Map([])
+  for cnt in containers {
+    match y_get(cnt, "network_mode") {
       Some(_) => ()
-      None => {
-        let args : Array[String] = ["create"]
-        match compose.networks.get(net) {
-          Some(desc) => {
-            match y_get(desc, "driver") {
-              Some(d) =>
-                match y_str(d) {
-                  Some(s) if s.length() > 0 => {
-                    args.push("--driver")
-                    args.push(s)
-                  }
-                  _ => ()
-                }
-              None => ()
-            }
-            if y_bool(y_get(desc, "internal").unwrap_or(y_null())).unwrap_or(
-                false,
-              ) {
-              args.push("--internal")
-            }
-            match y_get(desc, "driver_opts") {
-              Some(opts) =>
-                match y_map(opts) {
-                  Some(om) =>
-                    for e in om {
-                      match y_str(e.1) {
-                        Some(s) => {
-                          args.push("--opt")
-                          args.push(e.0 + "=" + s)
-                        }
-                        None => ()
-                      }
-                    }
-                  None => ()
-                }
-              None => ()
-            }
-            for label in y_env_list(y_get(desc, "labels").unwrap_or(y_null())) {
-              args.push("--label")
-              args.push(label)
-            }
-          }
-          None => ()
+      None =>
+        for entry in container_networks(compose, cnt) {
+          nets[entry.0] = ()
         }
-        args.push("--label")
-        args.push("io.podman.compose.project=" + compose.project_name)
-        args.push("--label")
-        args.push("com.docker.compose.project=" + compose.project_name)
-        args.push(name)
-        ignore(podman_run(podman, "network", args))
+    }
+    for mount in container_mounts(compose, cnt) {
+      if mount.kind != "volume" {
+        continue
       }
+      match mount.source {
+        Some(key) => vols[key] = ()
+        None => ()
+      }
+    }
+  }
+  for net in nets {
+    ensure_network(compose, podman, net.0)
+  }
+  for vol in vols {
+    ensure_volume(compose, podman, vol.0)
+  }
+}
+
+///|
+/// Whether a top-level volume declaration is `external` (in either the boolean
+/// or the `{name: ...}` form).
+fn volume_is_external(decl : @yaml.Yaml) -> Bool {
+  match y_get(decl, "external") {
+    Some(ext) =>
+      match ext {
+        @yaml.Yaml::Boolean(b) => b
+        @yaml.Yaml::Map(_) => true
+        _ => false
+      }
+    None => false
+  }
+}
+
+///|
+/// Create one network unless it already exists.
+async fn ensure_network(
+  compose : Compose,
+  podman : Podman,
+  net : String,
+) -> Unit raise Error {
+  let name = network_name(compose, net)
+  match podman_try_output(podman, "network", ["exists", name]) {
+    Some(_) => ()
+    None => {
+      let args : Array[String] = ["create"]
+      match compose.networks.get(net) {
+        Some(desc) => {
+          match y_get(desc, "driver") {
+            Some(d) =>
+              match y_str(d) {
+                Some(s) if s.length() > 0 => {
+                  args.push("--driver")
+                  args.push(s)
+                }
+                _ => ()
+              }
+            None => ()
+          }
+          if y_bool(y_get(desc, "internal").unwrap_or(y_null())).unwrap_or(
+              false,
+            ) {
+            args.push("--internal")
+          }
+          match y_get(desc, "driver_opts") {
+            Some(opts) =>
+              match y_map(opts) {
+                Some(om) =>
+                  for e in om {
+                    match y_str(e.1) {
+                      Some(s) => {
+                        args.push("--opt")
+                        args.push(e.0 + "=" + s)
+                      }
+                      None => ()
+                    }
+                  }
+                None => ()
+              }
+            None => ()
+          }
+          for label in y_env_list(y_get(desc, "labels").unwrap_or(y_null())) {
+            args.push("--label")
+            args.push(label)
+          }
+        }
+        None => ()
+      }
+      args.push("--label")
+      args.push("io.podman.compose.project=" + compose.project_name)
+      args.push("--label")
+      args.push("com.docker.compose.project=" + compose.project_name)
+      args.push(name)
+      ignore(podman_run(podman, "network", args))
     }
   }
 }
 
 ///|
-/// Create the named volumes a container mounts, unless they already exist.
-pub async fn assert_volumes(
+/// Create one named volume unless it already exists.
+async fn ensure_volume(
   compose : Compose,
   podman : Podman,
-  cnt : @yaml.Yaml,
+  key : String,
 ) -> Unit raise Error {
-  for volume in y_list(y_get(cnt, "volumes").unwrap_or(y_null())) {
-    let mount = parse_mount(compose, cnt, volume)
-    if mount.kind != "volume" {
-      continue
-    }
-    let key = match mount.source {
-      Some(s) => s
-      None => continue
-    }
-    let name = resolve_volume_name(compose, cnt, key, mount.target)
-    match podman_try_output(podman, "volume", ["inspect", name]) {
-      Some(_) => ()
-      None => {
-        let decl = compose.vols.get(key)
-        let is_ext = match decl {
-          Some(d) =>
-            y_bool(y_get(d, "external").unwrap_or(y_null())).unwrap_or(false)
-          None => false
-        }
-        if is_ext {
-          raise fail(
-            "external volume [" +
-            name +
-            "] does not exist; create it first with: podman volume create '" +
-            name +
-            "'",
-          )
-        }
-        let args : Array[String] = [
-          "create",
-          "--label",
-          "io.podman.compose.project=" + compose.project_name,
-          "--label",
-          "com.docker.compose.project=" + compose.project_name,
-        ]
-        match decl {
-          Some(d) => {
-            match y_get(d, "driver") {
-              Some(dr) =>
-                match y_str(dr) {
-                  Some(s) if s.length() > 0 => {
-                    args.push("--driver")
-                    args.push(s)
-                  }
-                  _ => ()
-                }
-              None => ()
-            }
-            match y_get(d, "driver_opts") {
-              Some(opts) =>
-                match y_map(opts) {
-                  Some(om) =>
-                    for e in om {
-                      match y_str(e.1) {
-                        Some(s) => {
-                          args.push("--opt")
-                          args.push(e.0 + "=" + s)
-                        }
-                        None => ()
-                      }
-                    }
-                  None => ()
-                }
-              None => ()
-            }
-            for label in y_env_list(y_get(d, "labels").unwrap_or(y_null())) {
-              args.push("--label")
-              args.push(label)
-            }
+  let name = resolve_volume_name(compose, y_null(), key, "")
+  match podman_try_output(podman, "volume", ["inspect", name]) {
+    Some(_) => ()
+    None => {
+      let decl = compose.vols.get(key)
+      match decl {
+        Some(d) =>
+          if volume_is_external(d) {
+            raise fail(
+              "external volume [" +
+              name +
+              "] does not exist; create it first with: podman volume create '" +
+              name +
+              "'",
+            )
           }
-          None => ()
-        }
-        args.push(name)
-        ignore(podman_run(podman, "volume", args))
+        None => ()
       }
+      let args : Array[String] = [
+        "create",
+        "--label",
+        "io.podman.compose.project=" + compose.project_name,
+        "--label",
+        "com.docker.compose.project=" + compose.project_name,
+      ]
+      match decl {
+        Some(d) => {
+          match y_get(d, "driver") {
+            Some(dr) =>
+              match y_str(dr) {
+                Some(s) if s.length() > 0 => {
+                  args.push("--driver")
+                  args.push(s)
+                }
+                _ => ()
+              }
+            None => ()
+          }
+          match y_get(d, "driver_opts") {
+            Some(opts) =>
+              match y_map(opts) {
+                Some(om) =>
+                  for e in om {
+                    match y_str(e.1) {
+                      Some(s) => {
+                        args.push("--opt")
+                        args.push(e.0 + "=" + s)
+                      }
+                      None => ()
+                    }
+                  }
+                None => ()
+              }
+            None => ()
+          }
+          for label in y_env_list(y_get(d, "labels").unwrap_or(y_null())) {
+            args.push("--label")
+            args.push(label)
+          }
+        }
+        None => ()
+      }
+      args.push(name)
+      ignore(podman_run(podman, "volume", args))
     }
   }
 }

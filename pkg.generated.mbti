@@ -12,9 +12,7 @@ pub fn apply_merge_keys(@yaml.Yaml) -> @yaml.Yaml
 
 pub fn ascii_lower(String) -> String
 
-pub async fn assert_networks(Compose, Podman, @yaml.Yaml) -> Unit
-
-pub async fn assert_volumes(Compose, Podman, @yaml.Yaml) -> Unit
+pub async fn assert_networks_and_volumes(Compose, Podman, Array[@yaml.Yaml]) -> Unit
 
 pub async fn cmd_build(Compose, Podman, CommandArgs) -> Int
 
@@ -52,9 +50,13 @@ pub async fn cmd_up(Compose, Podman, CommandArgs) -> Int
 
 pub async fn cmd_version(Podman, CommandArgs) -> Unit
 
+pub fn compose_env_file(Compose, String) -> Map[String, String]
+
 pub fn compose_labels(Compose) -> Array[String]
 
 pub fn config_hash(Compose, @yaml.Yaml) -> String
+
+pub fn container_mounts(Compose, @yaml.Yaml) -> Array[Mount]
 
 pub fn container_networks(Compose, @yaml.Yaml) -> Map[String, @yaml.Yaml]
 
@@ -84,7 +86,7 @@ pub async fn load_compose(GlobalOptions) -> Compose
 
 pub async fn main_cli() -> Unit
 
-pub fn mount_args(Compose, @yaml.Yaml, @yaml.Yaml) -> Array[String]
+pub fn mount_arg(Compose, @yaml.Yaml, Mount) -> Array[String]
 
 pub fn mount_target_of(@yaml.Yaml) -> String?
 
@@ -281,6 +283,7 @@ pub struct Compose {
   mut x_podman : Map[String, @yaml.Yaml]
   podman_version : String?
   mut pod_args : Array[String]
+  env_file_cache : Map[String, Map[String, String]]
 }
 
 pub struct GlobalOptions {

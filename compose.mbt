@@ -32,6 +32,9 @@ pub struct Compose {
   mut x_podman : Map[String, @yaml.Yaml]
   podman_version : String?
   mut pod_args : Array[String]
+  // `.env` files are read once per path, not once per service that references
+  // them.
+  env_file_cache : Map[String, Map[String, String]]
 }
 
 ///|
@@ -55,6 +58,7 @@ pub fn new_compose() -> Compose {
     x_podman: Map([]),
     podman_version: None,
     pod_args: [],
+    env_file_cache: Map([]),
   }
 }
 
@@ -110,8 +114,8 @@ pub fn format_name(compose : Compose, parts : Array[String]) -> String {
 /// it only has to change when the service configuration changes.
 pub fn simple_hash(s : String) -> String {
   let mut h : UInt64 = 14695981039346656037UL
-  for b in s.to_array() {
-    h = h ^ b.to_int().to_uint64()
+  for c in s {
+    h = h ^ c.to_int().to_uint64()
     h = h * 1099511628211UL
   }
   let digits = "0123456789abcdef".to_array()
@@ -145,6 +149,23 @@ fn build_environ(dotenv : Map[String, String]) -> Map[String, String] {
     environ[entry.0] = entry.1
   }
   environ
+}
+
+///|
+/// Read and parse an `env_file`, caching by path so a file shared by many
+/// services is read and parsed once.
+pub fn compose_env_file(
+  compose : Compose,
+  path : String,
+) -> Map[String, String] {
+  match compose.env_file_cache.get(path) {
+    Some(cached) => cached
+    None => {
+      let parsed = dotenv_to_dict(path)
+      compose.env_file_cache[path] = parsed
+      parsed
+    }
+  }
 }
 
 ///|
@@ -743,6 +764,9 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
   for entry in services {
     let (service_name, service) = entry
     let replicas = service_replicas(service)
+    // The config hash depends only on the service, not on the replica number,
+    // so compute it once instead of serializing the service per replica.
+    let service_hash = config_hash(compose, service)
     let names : Array[String] = []
     for num in 1..<=replicas {
       let name0 = format_name(compose, [service_name, num.to_string()])
@@ -762,6 +786,7 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
       containers.push(
         make_container(
           compose, service_name, service, name, num, pod_name, deps, base_labels,
+          service_hash,
         ),
       )
     }
@@ -798,7 +823,7 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
 
 ///|
 /// How many containers a service wants. `scale` wins over `deploy.replicas`.
-fn service_replicas(service : @yaml.Yaml) -> Int {
+fn service_replicas(service : @yaml.Yaml) -> Int32 {
   match y_get(service, "scale") {
     Some(s) =>
       match y_int(s) {
@@ -829,10 +854,11 @@ fn make_container(
   service_name : String,
   service : @yaml.Yaml,
   name : String,
-  num : Int,
+  num : Int32,
   pod_name : String?,
   deps : Map[String, Array[String]],
   base_labels : Array[String],
+  config_hash_value : String,
 ) -> @yaml.Yaml {
   let out : Map[String, @yaml.Yaml] = Map([])
   match y_map(service) {
@@ -858,9 +884,7 @@ fn make_container(
   for label in base_labels {
     labels.push(y_str_v(label))
   }
-  labels.push(
-    y_str_v("io.podman.compose.config-hash=" + config_hash(compose, service)),
-  )
+  labels.push(y_str_v("io.podman.compose.config-hash=" + config_hash_value))
   labels.push(y_str_v("com.docker.compose.container-number=" + num.to_string()))
   labels.push(y_str_v("io.podman.compose.service=" + service_name))
   labels.push(y_str_v("com.docker.compose.service=" + service_name))

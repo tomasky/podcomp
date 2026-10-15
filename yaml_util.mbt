@@ -57,7 +57,7 @@ pub fn y_bool(v : @yaml.Yaml) -> Bool? {
 
 ///|
 /// Parse an integer, or `None` when the text is not one.
-pub fn try_int_str(s : String) -> Int? {
+pub fn try_int_str(s : String) -> Int32? {
   Some(@string.parse_int(s.trim())) catch {
     _ => None
   }
@@ -65,7 +65,7 @@ pub fn try_int_str(s : String) -> Int? {
 
 ///|
 /// An integer, accepting ints, floats and numeric strings.
-pub fn y_int(v : @yaml.Yaml) -> Int? {
+pub fn y_int(v : @yaml.Yaml) -> Int32? {
   match v {
     @yaml.Yaml::Integer(i) => Some(i.to_int())
     @yaml.Yaml::Real(d, ..) => Some(d.to_int())
@@ -191,7 +191,7 @@ pub fn y_str_v(s : String) -> @yaml.Yaml {
 }
 
 ///|
-pub fn y_int_v(i : Int) -> @yaml.Yaml {
+pub fn y_int_v(i : Int32) -> @yaml.Yaml {
   @yaml.Yaml::Integer(i.to_int64())
 }
 

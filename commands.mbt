@@ -192,30 +192,56 @@ async fn create_pods(compose : Compose, podman : Podman) -> Unit {
 }
 
 ///|
+/// The containers of the named services, or every container when no service
+/// is named.
+fn containers_for(
+  compose : Compose,
+  services : Array[String],
+) -> Array[@yaml.Yaml] {
+  if services.length() == 0 {
+    return compose.containers
+  }
+  let out : Array[@yaml.Yaml] = []
+  for cnt in compose.containers {
+    let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
+    if services.contains(service) {
+      out.push(cnt)
+    }
+  }
+  out
+}
+
+///|
+/// The distinct images used by a set of containers, in first-seen order.
+fn unique_images(containers : Array[@yaml.Yaml]) -> Array[String] {
+  let seen : Map[String, Unit] = Map([])
+  let out : Array[String] = []
+  for cnt in containers {
+    match y_get(cnt, "image").bind(y_str) {
+      Some(img) =>
+        if img.length() > 0 && !seen.contains(img) {
+          seen[img] = ()
+          out.push(img)
+        }
+      None => ()
+    }
+  }
+  out
+}
+
+///|
 /// Pull the images a set of containers uses.
 async fn pull_images(
   compose : Compose,
   podman : Podman,
   containers : Array[@yaml.Yaml],
-) -> Int {
+) -> Int32 {
   ignore(compose)
-  let seen : Map[String, Unit] = Map([])
   let mut status = 0
-  for cnt in containers {
-    match y_get(cnt, "image") {
-      Some(image) =>
-        match y_str(image) {
-          Some(img) =>
-            if img.length() > 0 && !seen.contains(img) {
-              seen[img] = ()
-              let code = podman_run(podman, "pull", [img])
-              if code != 0 {
-                status = code
-              }
-            }
-          None => ()
-        }
-      None => ()
+  for img in unique_images(containers) {
+    let code = podman_run(podman, "pull", [img])
+    if code != 0 {
+      status = code
     }
   }
   status
@@ -320,7 +346,7 @@ pub async fn cmd_build(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   assert_services(compose, args.services)
   do_build(compose, podman, args, args.services, false)
 }
@@ -335,7 +361,7 @@ async fn do_build(
   args : CommandArgs,
   services : Array[String],
   if_not_exists : Bool,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let wanted : Map[String, Unit] = Map([])
   for s in services {
     wanted[s] = ()
@@ -383,7 +409,7 @@ pub async fn cmd_up(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   assert_services(compose, args.services)
   let excluded = get_excluded(compose, args.services, true, false)
   if !args.no_build {
@@ -428,31 +454,29 @@ pub async fn cmd_up(
     }
   }
   create_pods(compose, podman)
-  let mut status = 0
+  // Resolve the containers that take part once, then ensure the networks and
+  // named volumes they share exist with one probe per distinct name.
+  let targets : Array[@yaml.Yaml] = []
   for cnt in compose.containers {
     let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
-    if excluded.contains(service) {
-      continue
+    if !excluded.contains(service) {
+      targets.push(cnt)
     }
-    let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
-    assert_networks(compose, podman, cnt)
-    assert_volumes(compose, podman, cnt)
+  }
+  assert_networks_and_volumes(compose, podman, targets)
+  let mut status = 0
+  for cnt in targets {
     let cargs = container_to_args(compose, cnt, false, args.no_deps)
     let code = podman_run(podman, "create", cargs)
     if code != 0 {
       status = code
     }
-    ignore(name)
   }
   if args.no_start {
     return status
   }
   if args.detach || args.wait {
-    for cnt in compose.containers {
-      let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
-      if excluded.contains(service) {
-        continue
-      }
+    for cnt in targets {
       let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
       let code = podman_run(podman, "start", [name])
       if code != 0 {
@@ -465,13 +489,9 @@ pub async fn cmd_up(
     return status
   }
   // Attached: start every container with `-a` concurrently.
-  let codes : Array[Int] = []
+  let codes : Array[Int32] = []
   let names : Array[String] = []
-  for cnt in compose.containers {
-    let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
-    if excluded.contains(service) {
-      continue
-    }
+  for cnt in targets {
     names.push(y_str_or(y_get(cnt, "name").unwrap_or(y_null()), ""))
   }
   @async.with_task_group(group => {
@@ -521,7 +541,7 @@ pub async fn cmd_down(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int {
+) -> Int32 {
   let excluded = get_excluded(compose, args.services, false, true)
   let mut status = 0
   let mut names : Array[String] = []
@@ -572,7 +592,7 @@ pub async fn cmd_ps(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int {
+) -> Int32 {
   let cargs : Array[String] = [
     "-a",
     "--filter",
@@ -599,7 +619,7 @@ pub async fn cmd_logs(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let services = if args.services.length() == 0 {
     keys_of(compose.container_names_by_service)
   } else {
@@ -663,7 +683,7 @@ async fn transfer_service_status(
   podman : Podman,
   args : CommandArgs,
   action : String,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let services = if args.services.length() == 0 {
     keys_of(compose.container_names_by_service)
   } else {
@@ -701,7 +721,7 @@ pub async fn cmd_start(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let status = transfer_service_status(compose, podman, args, "start")
   if args.wait {
     wait_for_running(compose, podman)
@@ -715,7 +735,7 @@ pub async fn cmd_stop(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   transfer_service_status(compose, podman, args, "stop")
 }
 
@@ -725,7 +745,7 @@ pub async fn cmd_restart(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   transfer_service_status(compose, podman, args, "restart")
 }
 
@@ -735,7 +755,7 @@ pub async fn cmd_kill(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   if args.services.length() == 0 && !args.all {
     raise fail(
       "you must provide at least one service name or use --all to kill all services",
@@ -768,7 +788,7 @@ pub async fn cmd_pause_unpause(
   podman : Podman,
   args : CommandArgs,
   action : String,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let services = if args.services.length() == 0 {
     keys_of(compose.container_names_by_service)
   } else {
@@ -784,36 +804,9 @@ pub async fn cmd_pull(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   assert_services(compose, args.services)
-  let wanted : Map[String, Unit] = Map([])
-  for s in args.services {
-    wanted[s] = ()
-  }
-  let seen : Map[String, Unit] = Map([])
-  let mut status = 0
-  for cnt in compose.containers {
-    let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
-    if wanted.length() > 0 && !wanted.contains(service) {
-      continue
-    }
-    match y_get(cnt, "image") {
-      Some(image) =>
-        match y_str(image) {
-          Some(img) =>
-            if img.length() > 0 && !seen.contains(img) {
-              seen[img] = ()
-              let code = podman_run(podman, "pull", [img])
-              if code != 0 {
-                status = code
-              }
-            }
-          None => ()
-        }
-      None => ()
-    }
-  }
-  status
+  pull_images(compose, podman, containers_for(compose, args.services))
 }
 
 ///|
@@ -822,7 +815,7 @@ pub async fn cmd_rm(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let services = if args.services.length() == 0 {
     keys_of(compose.container_names_by_service)
   } else {
@@ -845,7 +838,7 @@ pub async fn cmd_exec(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let service = match first_of(args.services) {
     Some(s) => s
     None => raise fail("exec requires a service name")
@@ -896,7 +889,7 @@ pub async fn cmd_run(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let service = match first_of(args.services) {
     Some(s) => s
     None => raise fail("run requires a service name")
@@ -942,6 +935,8 @@ pub async fn cmd_run(
     cargs.clear()
     cargs.append(with_stdin)
   }
+  // NOTE: the reference does not create networks/volumes here either, so a
+  // `run` against a project that was never brought up will fail in podman.
   podman_run(podman, "run", cargs)
 }
 
@@ -951,26 +946,18 @@ pub async fn cmd_images(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
+  assert_services(compose, args.services)
   let mut status = 0
-  for cnt in compose.containers {
-    match y_get(cnt, "image") {
-      Some(image) =>
-        match y_str(image) {
-          Some(img) => {
-            let cargs : Array[String] = []
-            if args.quiet {
-              cargs.push("--quiet")
-            }
-            cargs.push(img)
-            let code = podman_run(podman, "images", cargs)
-            if code != 0 {
-              status = code
-            }
-          }
-          None => ()
-        }
-      None => ()
+  for img in unique_images(containers_for(compose, args.services)) {
+    let cargs : Array[String] = []
+    if args.quiet {
+      cargs.push("--quiet")
+    }
+    cargs.push(img)
+    let code = podman_run(podman, "images", cargs)
+    if code != 0 {
+      status = code
     }
   }
   status
@@ -982,7 +969,7 @@ pub async fn cmd_port(
   compose : Compose,
   podman : Podman,
   args : CommandArgs,
-) -> Int raise Error {
+) -> Int32 raise Error {
   let service = match first_of(args.services) {
     Some(s) => s
     None => raise fail("port requires a service name")

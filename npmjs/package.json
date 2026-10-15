@@ -1,6 +1,6 @@
 {
   "name": "@tomasko/podcomp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Run Compose files with Podman , a single native binary, no daemon, no Python.",
   "license": "Apache-2.0",
   "bin": {

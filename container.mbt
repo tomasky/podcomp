@@ -121,7 +121,7 @@ pub fn container_to_args(
       }
       continue
     }
-    for entry in dotenv_to_dict(full) {
+    for entry in compose_env_file(compose, full) {
       args.push("-e")
       args.push(entry.0 + "=" + entry.1)
     }
@@ -144,8 +144,8 @@ pub fn container_to_args(
     args.push("--tmpfs")
     args.push(item)
   }
-  for volume in y_list(y_get(cnt, "volumes").unwrap_or(y_null())) {
-    for arg in mount_args(compose, cnt, volume) {
+  for mount in container_mounts(compose, cnt) {
+    for arg in mount_arg(compose, cnt, mount) {
       args.push(arg)
     }
   }
@@ -652,7 +652,7 @@ fn apply_healthcheck_test(out : Array[String], hc : @yaml.Yaml) -> Unit {
 
 ///|
 /// Convert `"90s"`, `"1m30s"`, `"500ms"` or a bare number to seconds.
-pub fn str_to_seconds(text : String) -> Int? {
+pub fn str_to_seconds(text : String) -> Int32? {
   let s = text.trim().to_owned()
   if s.length() == 0 {
     return None

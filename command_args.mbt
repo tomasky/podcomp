@@ -15,7 +15,7 @@ pub struct CommandArgs {
   mut volumes : Bool
   mut remove_orphans : Bool
   mut rmi : String?
-  mut timeout : Int?
+  mut timeout : Int32?
   mut follow : Bool
   mut tail : String?
   mut since : String?
@@ -29,15 +29,15 @@ pub struct CommandArgs {
   mut short : Bool
   mut signal : String?
   mut all : Bool
-  mut index : Int
+  mut index : Int32
   mut protocol : String
-  mut private_port : Int
+  mut private_port : Int32
   mut no_cache : Bool
   mut pull : String?
   build_arg : Array[String]
   mut quiet_pull : Bool
   mut wait : Bool
-  mut wait_timeout : Int?
+  mut wait_timeout : Int32?
   mut name : String?
   mut entrypoint : String?
   env : Array[String]

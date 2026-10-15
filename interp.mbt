@@ -67,7 +67,7 @@ pub fn interp_str(
 
 ///|
 /// The index of the `}` matching the `{` at `open`, or -1.
-fn find_closing_brace(chars : Array[Char], open : Int) -> Int {
+fn find_closing_brace(chars : Array[Char], open : Int32) -> Int32 {
   let mut level = 0
   let mut i = open
   while i < chars.length() {
