@@ -91,7 +91,7 @@ jobs:
         run: |
           moon build --target native --release
           mkdir -p dist
-          cp _build/native/release/build/cmd/main/main.exe "dist/podcomp-${{ matrix.target }}"
+          cp _build/native/release/build/cmd/podcomp/podcomp.exe "dist/podcomp-${{ matrix.target }}"
           chmod 755 "dist/podcomp-${{ matrix.target }}"
 
       # Only two assets per target: the binary and its checksum. Both the

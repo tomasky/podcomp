@@ -74,7 +74,7 @@ jobs:
       - name: Smoke test
         run: |
           set -eu
-          BIN=_build/native/debug/build/cmd/main/main.exe
+          BIN=_build/native/debug/build/cmd/podcomp/podcomp.exe
           "$BIN" --version
           "$BIN" --help >/dev/null
           "$BIN" version | grep -q "podcomp version"

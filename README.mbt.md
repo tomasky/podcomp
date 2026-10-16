@@ -23,6 +23,9 @@ curl -LsSf https://raw.githubusercontent.com/tomasky/podcomp/main/install.sh | b
 # npm
 npm install -g @tomasko/podcomp
 
+# The MoonBit package registry (needs the MoonBit toolchain)
+moon install kupas/podcomp/cmd/podcomp
+
 # From source
 git clone https://github.com/tomasky/podcomp && cd podcomp
 moon build --target native --release
@@ -130,7 +133,7 @@ Requires the [MoonBit toolchain](https://www.moonbitlang.com/download/).
 moon check --target native --deny-warn
 moon test --target native
 moon build --target native --release
-# _build/native/release/build/cmd/main/main.exe
+# _build/native/release/build/cmd/podcomp/podcomp.exe
 ```
 
 Releases are cut by pushing a `v*` tag; `.github/workflows/release.yml` builds

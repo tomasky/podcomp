@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "kupas/podcomp/cmd/main"
+package "kupas/podcomp/cmd/podcomp"
 
 // Values
 
