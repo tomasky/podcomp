@@ -1,0 +1,77 @@
+# Plain scalars, exactly as a compose file would write them.
+#
+# `check-yaml-load.py` runs this through PyYAML's loader and dumper and stores
+# the result in `yaml_scalar_expected.txt`; the test `yaml load matches pyyaml`
+# runs it through `load_yaml_documents` and `y_dump` instead. Every value here
+# has to stay unquoted, which is why the cases cannot live in
+# `yaml_dump_corpus.yaml`: `yaml.safe_dump` of the Python value `"yes"` would
+# quote it, and the quoting is what the resolver rules are about.
+bool_yes: yes
+bool_no: no
+bool_on: on
+bool_off: off
+bool_true: True
+bool_false: FALSE
+bool_capital: Yes
+bool_upper: ON
+hex: 0x10
+hex_neg: -0x1F
+hex_underscore: 0xFF_FF
+binary: 0b101
+octal_old: 010
+octal_old_neg: -0777
+octal_new: 0o7
+octal_bad: 08
+octal_bad_long: 09
+int_underscore: 1_000
+int_plus: +5
+int_zero: 0
+int_neg_zero: -0
+int_leading_zeroes: 00
+int_big: 123456789012345678
+int_max: 9223372036854775807
+int_min: -9223372036854775808
+# Integers beyond `Int64` live in `yaml_load_wbtest.mbt`: PyYAML's `int()` is
+# unbounded, and the library's `Yaml` type is not, so they cannot be aligned.
+sexagesimal: 12:30
+sexagesimal_neg: -1:30
+sexagesimal_three: 1:2:3
+null_tilde: ~
+null_word: null
+null_capital: Null
+null_upper: NULL
+null_empty:
+inf: .inf
+inf_neg: -.inf
+inf_capital: .Inf
+nan: .nan
+float_dot: .5
+str_neg_dot_5: -.5
+float_trailing: 1.
+float_exp: 1.5e+3
+float_exp_neg: 1.5e-7
+float_exp_nosign: 1e3
+float_exp_nosign_dot: 1.5e3
+float_underscore: 1_000.5
+float_big: 1.0e+16
+float_big2: 2.5e+16
+float_overflow: 1.8e+308
+float_underflow: 1.0e-999
+float_small: 5.0e-324
+float_neg_big: -1.0e+16
+float_precision: 0.30000000000000004
+float_tenth: 0.1
+float_sexagesimal: 1:30.5
+float_100: 100.0
+str_word: plain
+str_colon: x:y
+str_hash: x#y
+str_dash: x-
+str_space: a b
+str_dot: 1.2.3
+str_plus: 1+2
+str_slash: 1/2
+float_leading_zero: 08.5
+str_e: 1e
+str_neg: -x
+str_underscore_only: _

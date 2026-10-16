@@ -78,6 +78,15 @@ d: ''
 - []
 - {}
 - ''
+--CASE empty_key
+? ''
+: empty
+--CASE empty_key_nested
+? ''
+: b: 2
+a:
+  ? ''
+  : 1
 --CASE empty_map
 {}
 --CASE empty_seq
@@ -97,20 +106,74 @@ false
 --CASE float_100
 100.0
 ...
+--CASE float_15
+1000000000000000.0
+...
+--CASE float_big
+1.0e+16
+...
+--CASE float_big2
+1.0e+17
+...
+--CASE float_big3
+2.5e+16
+...
+--CASE float_denormal
+2.2250738585072014e-308
+...
+--CASE float_e100
+1.0e+100
+...
+--CASE float_e_100
+1.0e-100
+...
 --CASE float_exp
 1.5e-07
+...
+--CASE float_exp_pos
+1500.0
 ...
 --CASE float_int
 2.0
 ...
+--CASE float_max
+1.7976931348623157e+308
+...
 --CASE float_neg
 -0.0
+...
+--CASE float_neg_big
+-1.0e+16
+...
+--CASE float_overflow
+.inf
+...
+--CASE float_pi
+3.141592653589793
+...
+--CASE float_precision
+0.30000000000000004
 ...
 --CASE float_small
 0.001
 ...
+--CASE float_subnormal
+5.0e-324
+...
+--CASE float_ten_k
+0.0001
+...
 --CASE float_tenth
 0.1
+...
+--CASE float_third
+0.3333333333333333
+...
+--CASE float_tiny
+1.0e-05
+...
+--CASE float_wide
+1.2345678901234567e+19
 ...
 --CASE float_zero
 0.0
@@ -127,6 +190,9 @@ x#
 ...
 --CASE int_str
 '123'
+--CASE key_needs_quotes
+'a: b':
+  "x\ty": 1
 --CASE key_sort
 .: 6
 M: 3
@@ -145,6 +211,12 @@ cmd:
   b a\tb a\tb a\tb a\tb "
 --CASE long_key
 ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+: 1
+--CASE long_key_127
+? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+: 1
+--CASE long_key_128
+? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 : 1
 --CASE long_key_nested
 a:
@@ -188,6 +260,11 @@ a:
 
 
   b'
+--CASE multiline_key
+? 'a
+
+  b'
+: 1
 --CASE nbsp
 "\_"
 --CASE neg

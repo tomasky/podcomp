@@ -44,6 +44,15 @@ empty_in_seq:
 - []
 - {}
 - ''
+empty_key:
+  ? ''
+  : empty
+empty_key_nested:
+  ? ''
+  : b: 2
+  a:
+    ? ''
+    : 1
 empty_map: {}
 empty_seq: []
 empty_str: ''
@@ -52,17 +61,38 @@ esc: "a\eb"
 'false': false
 float: 1.5
 float_100: 100.0
+float_15: 1000000000000000.0
+float_big: 1.0e+16
+float_big2: 1.0e+17
+float_big3: 2.5e+16
+float_denormal: 2.2250738585072014e-308
+float_e100: 1.0e+100
+float_e_100: 1.0e-100
 float_exp: 1.5e-07
+float_exp_pos: 1500.0
 float_int: 2.0
+float_max: 1.7976931348623157e+308
 float_neg: -0.0
+float_neg_big: -1.0e+16
+float_overflow: .inf
+float_pi: 3.141592653589793
+float_precision: 0.30000000000000004
 float_small: 0.001
+float_subnormal: 5.0e-324
+float_ten_k: 0.0001
 float_tenth: 0.1
+float_third: 0.3333333333333333
+float_tiny: 1.0e-05
+float_wide: 1.2345678901234567e+19
 float_zero: 0.0
 gt: '>x'
 hash_end: x#
 hash_space: 'a # b'
 int: 42
 int_str: '123'
+key_needs_quotes:
+  'a: b':
+    "x\ty": 1
 key_sort:
   .: 6
   M: 3
@@ -80,6 +110,12 @@ long_double:
   b a\tb a\tb a\tb a\tb "
 long_key:
   ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  : 1
+long_key_127:
+  ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  : 1
+long_key_128:
+  ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
   : 1
 long_key_nested:
   a:
@@ -112,6 +148,11 @@ multi: 'a
 
 
   b'
+multiline_key:
+  ? 'a
+
+    b'
+  : 1
 nbsp: "\_"
 neg: -7
 nel: "a\Nb"

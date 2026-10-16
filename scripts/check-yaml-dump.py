@@ -11,16 +11,10 @@ source of truth for both files under `testdata/`:
 
 Run it after changing the emitter, then `moon test`.
 
-Two PyYAML behaviours are deliberately *not* covered, because they cannot be
-observed through this project's loader:
-
-  * very large floats: MoonBit prints `1e16` as `10000000000000000.0`, Python's
-    `repr` switches to `1.0e+16`;
-  * empty mapping keys: PyYAML emits `? ''`, which the MoonBit YAML loader
-    rejects.
-
-Both need a compose file that is pathological in the same way, and neither
-changes what `config` prints for a real one.
+Scalars that PyYAML writes unquoted cannot be round-tripped through
+`yaml.safe_dump` of a Python value (it would quote `"yes"`), so the plain
+scalar cases live in `yaml_scalar_corpus.yaml`, checked by
+`check-yaml-load.py` instead.
 """
 
 import argparse
@@ -114,7 +108,13 @@ CASES = {
     "long_quoted_seq": ["1.5 " * 30],
     "long_double": ["a\tb " * 20],
     "long_key": {"k" * 130: 1},
+    "long_key_127": {"k" * 127: 1},
+    "long_key_128": {"k" * 128: 1},
     "long_key_nested": {"a": {"k" * 140: 1}},
+    "empty_key": {"": "empty"},
+    "empty_key_nested": {"a": {"": 1}, "": {"b": 2}},
+    "multiline_key": {"a\nb": 1},
+    "key_needs_quotes": {"a: b": {"x\ty": 1}},
     # Collection shapes.
     "empty_map": {},
     "empty_seq": [],
@@ -145,6 +145,24 @@ CASES = {
     "float_exp": 1.5e-7,
     "float_100": 100.0,
     "float_tenth": 0.1,
+    "float_big": 1e16,
+    "float_big2": 1e17,
+    "float_big3": 2.5e16,
+    "float_neg_big": -1e16,
+    "float_15": 1e15,
+    "float_tiny": 1e-5,
+    "float_ten_k": 1e-4,
+    "float_subnormal": 5e-324,
+    "float_denormal": 2.2250738585072014e-308,
+    "float_max": 1.7976931348623157e308,
+    "float_overflow": 1.8e308,
+    "float_precision": 0.30000000000000004,
+    "float_third": 1 / 3,
+    "float_pi": 3.141592653589793,
+    "float_exp_pos": 1.5e3,
+    "float_wide": 12345678901234567890.5,
+    "float_e100": 1e100,
+    "float_e_100": 1e-100,
 }
 
 

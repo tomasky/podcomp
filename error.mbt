@@ -22,3 +22,12 @@ pub fn error_text(error : Error) -> String {
     _ => error.to_string()
   }
 }
+
+///|
+/// Print the message rather than the constructor name when a test runner or a
+/// debugger renders the error.
+impl Debug for PodCompError with fn to_repr(self) {
+  match self {
+    PodCompError(message) => Repr::Repr(message)
+  }
+}

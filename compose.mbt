@@ -644,7 +644,7 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
       raise fail("missing file: \{file}")
     }
     let text = read_document(file)
-    let docs = @yaml.Yaml::load_from_string(text) catch {
+    let docs = load_yaml_documents(text) catch {
       e => raise fail("\{file}: \{error_text(e)}")
     }
     if docs.length() == 0 {

@@ -983,8 +983,12 @@ fn PyYamlEmitter::write_scalar(
 }
 
 ///|
-/// PyYAML writes floats as `repr(value)`, lowercased, with `.0` inserted when
-/// the exponent carries no decimal point of its own.
+/// `repr(float)` as CPython writes it, which is what PyYAML emits for floats.
+///
+/// MoonBit's `Double::to_string` has its own notation thresholds (it prints
+/// `1e16` as `10000000000000000`), so the digits are re-rendered the way
+/// CPython does: fixed notation while the decimal exponent is in `(-4, 16]`,
+/// scientific notation outside that, with a signed two-digit exponent.
 fn yaml_float_repr(value : Double) -> String {
   if value.is_nan() {
     return ".nan"
@@ -999,47 +1003,88 @@ fn yaml_float_repr(value : Double) -> String {
     // MoonBit prints `-0.0` as `0`; Python keeps the sign in `repr`.
     return if value.reinterpret_as_uint64() >> 63 == 1 { "-0.0" } else { "0.0" }
   }
-  let raw = value.to_string()
-  let mut text = ""
-  let mut has_dot = false
-  let mut has_exponent = false
-  let mut exponent_at = -1
-  for c in raw {
-    if c == '.' {
-      has_dot = true
+  let negative = value < 0.0
+  let raw = if negative { (-value).to_string() } else { value.to_string() }
+  let ch = raw.to_array()
+  let mut index = 0
+  let mut int_digits = ""
+  while index < ch.length() &&
+        ch[index] != '.' &&
+        ch[index] != 'e' &&
+        ch[index] != 'E' {
+    int_digits += ch[index].to_string()
+    index += 1
+  }
+  let mut frac_digits = ""
+  if index < ch.length() && ch[index] == '.' {
+    index += 1
+    while index < ch.length() && ch[index] != 'e' && ch[index] != 'E' {
+      frac_digits += ch[index].to_string()
+      index += 1
     }
-    if c == 'e' || c == 'E' {
-      has_exponent = true
-      exponent_at = text.length()
+  }
+  let mut exp10 = 0
+  if index < ch.length() && (ch[index] == 'e' || ch[index] == 'E') {
+    index += 1
+    let mut exp_negative = false
+    if index < ch.length() && (ch[index] == '+' || ch[index] == '-') {
+      exp_negative = ch[index] == '-'
+      index += 1
     }
-    if c >= 'A' && c <= 'Z' {
-      text += (c.to_int() + 32).unsafe_to_char().to_string()
+    while index < ch.length() {
+      exp10 = exp10 * 10 + (ch[index].to_int() - 48)
+      index += 1
+    }
+    if exp_negative {
+      exp10 = -exp10
+    }
+  }
+  // The value is `0.<digits> * 10^decpt`.
+  let mut digits = int_digits + frac_digits
+  let mut decpt = int_digits.length() + exp10
+  let mut first = 0
+  while first < digits.length() && digits[first] == '0' {
+    first += 1
+    decpt -= 1
+  }
+  let mut last = digits.length()
+  while last > first && digits[last - 1] == '0' {
+    last -= 1
+  }
+  digits = digits[first:last].to_owned()
+  if digits.length() == 0 {
+    return if negative { "-0.0" } else { "0.0" }
+  }
+  let body = if decpt > -4 && decpt <= 16 {
+    if decpt <= 0 {
+      "0." + String::make(-decpt, '0') + digits
+    } else if decpt >= digits.length() {
+      digits + String::make(decpt - digits.length(), '0') + ".0"
     } else {
-      text += c.to_string()
+      digits[:decpt].to_owned() + "." + digits[decpt:].to_owned()
     }
-  }
-  let mut mantissa = text
-  let mut exponent = ""
-  if has_exponent {
-    mantissa = text[:exponent_at].to_owned()
-    exponent = text[exponent_at:].to_owned()
-  }
-  if !has_dot {
-    mantissa += ".0"
-  }
-  if !has_exponent {
-    return mantissa
-  }
-  // Python pads the exponent to two digits and always writes its sign.
-  let digits = exponent[1:].to_owned()
-  let sign = if digits.length() > 0 && (digits[0] == '-' || digits[0] == '+') {
-    digits[:1].to_owned()
   } else {
-    "+"
+    let mantissa = if digits.length() > 1 {
+      digits[:1].to_owned() + "." + digits[1:].to_owned()
+    } else {
+      digits + ".0"
+    }
+    mantissa + format_float_exponent(decpt - 1)
   }
-  let number = if sign == "+" { digits } else { digits[1:].to_owned() }
-  let padded = if number.length() < 2 { "0" + number } else { number }
-  mantissa + "e" + sign + padded
+  if negative {
+    "-" + body
+  } else {
+    body
+  }
+}
+
+///|
+/// CPython writes float exponents with a sign and at least two digits.
+fn format_float_exponent(exponent : Int32) -> String {
+  let magnitude = if exponent < 0 { -exponent } else { exponent }
+  let digits = magnitude.to_string()
+  let padded = if digits.length() < 2 { "0" + digits } else { digits }
+  (if exponent < 0 { "e-" } else { "e+" }) + padded
 }
 
 ///|
@@ -1086,9 +1131,14 @@ fn PyYamlEmitter::dump_scalar(
 
 ///|
 /// Port of `Emitter.check_simple_key`: a key needs the explicit `?` form when
-/// it spans lines or is longer than 128 characters.
+/// it is empty, spans lines, or is too long.
+///
+/// The limit counts the prepared tag, which for a string key is `!!str` — five
+/// characters PyYAML never writes, since the tag is implicit. The cutoff is
+/// therefore 122 characters of key.
 fn is_simple_yaml_key(ch : Array[Char]) -> Bool {
-  !analyze_scalar(ch).multiline && ch.length() <= 128
+  let analysis = analyze_scalar(ch)
+  !analysis.empty && !analysis.multiline && ch.length() + 5 < 128
 }
 
 ///|
@@ -1151,7 +1201,9 @@ fn PyYamlEmitter::dump_mapping(
       self.indicator(":", false)
     } else {
       self.indicator("?", true, indention=true)
-      self.write_scalar(key_ch, plain_is_string(key_ch), true)
+      // `expect_node(mapping=True)` without `simple_key=True`, so an explicit
+      // key is written in value context.
+      self.write_scalar(key_ch, plain_is_string(key_ch), false)
       self.indent_to()
       self.indicator(":", true, indention=true)
     }

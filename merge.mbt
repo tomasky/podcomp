@@ -190,15 +190,16 @@ pub fn short_mount_target(spec : String) -> String? {
 ///|
 /// Resolve YAML merge keys (`<<: *anchor`) in place, bottom-up.
 ///
-/// The parser keeps `<<` as an ordinary key, so it is expanded here: a single
-/// mapping, or a sequence of mappings, contributes the keys the node does not
-/// already define. The `<<` key is removed afterwards.
+/// The loader marks a plain `<<` key with `merge_key_marker()`, so it is expanded
+/// here: a single mapping, or a sequence of mappings, contributes the keys the
+/// node does not already define, and the first source wins. The marker key is
+/// removed afterwards. A quoted `"<<"` is an ordinary key and is left alone.
 pub fn apply_merge_keys(v : @yaml.Yaml) -> @yaml.Yaml {
   match v {
     @yaml.Yaml::Map(m) => {
       let out : Map[String, @yaml.Yaml] = Map([])
       // Merge sources first so an explicit key below can override them.
-      match m.get("<<") {
+      match m.get(merge_key_marker()) {
         Some(merge_value) => {
           let sources : Array[@yaml.Yaml] = match merge_value {
             @yaml.Yaml::Array(a) => a
@@ -221,7 +222,7 @@ pub fn apply_merge_keys(v : @yaml.Yaml) -> @yaml.Yaml {
       }
       for entry in m {
         let (k, value) = entry
-        if k == "<<" {
+        if k == merge_key_marker() {
           continue
         }
         out[k] = apply_merge_keys(value)

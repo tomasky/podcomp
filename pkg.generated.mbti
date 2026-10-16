@@ -84,6 +84,8 @@ pub fn join_name_parts(Compose, Array[String]) -> String
 
 pub async fn load_compose(GlobalOptions) -> Compose
 
+pub fn load_yaml_documents(StringView) -> Array[@yaml.Yaml] raise
+
 pub async fn main_cli() -> Unit
 
 pub fn mount_arg(Compose, @yaml.Yaml, Mount) -> Array[String]
