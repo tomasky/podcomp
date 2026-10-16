@@ -248,13 +248,4 @@ pub fn y_clone(v : @yaml.Yaml) -> @yaml.Yaml {
   }
 }
 
-///|
-/// Render a value as YAML text, without the leading `---` document marker.
-pub fn y_dump(v : @yaml.Yaml) -> String {
-  let text = v.dump()
-  if text.has_prefix("---\n") {
-    text[4:].to_owned()
-  } else {
-    text
-  }
-}
+// `y_dump` lives in `yaml_dump.mbt`, which ports PyYAML's block emitter.

@@ -1,0 +1,299 @@
+--CASE amp
+'&anchor'
+--CASE at_str
+'@x'
+--CASE backslash
+a\b
+...
+--CASE backtick_str
+'`x'
+--CASE bang
+'!tag'
+--CASE bmp_high
+"\uFFFF"
+--CASE bom
+"\uFEFF"
+--CASE bool
+true
+...
+--CASE bool_str
+'true'
+--CASE both_quotes
+a'b"c
+...
+--CASE brace_str
+a{b}
+...
+--CASE bracket_str
+a[b]
+...
+--CASE colon_nospace
+x:y
+...
+--CASE colon_space
+'a: b'
+--CASE comma_str
+a,b
+...
+--CASE cr
+"a\rb"
+--CASE dash_end
+x-
+...
+--CASE dash_space
+'- x'
+--CASE date_str
+'2024-01-01'
+--CASE dbl_space
+a  b
+...
+--CASE deep
+a:
+  b:
+    c:
+      d:
+        e:
+          f:
+          - 1
+          - 2
+          - 3
+--CASE deep_list
+a:
+- - 1
+--CASE del
+"a\x7Fb"
+--CASE dollar
+$HOME
+...
+--CASE dot_inf_str
+'.inf'
+--CASE emoji
+"a\U0001F600b"
+--CASE empties
+a: null
+b: []
+c: {}
+d: ''
+--CASE empty_in_seq
+- []
+- {}
+- ''
+--CASE empty_map
+{}
+--CASE empty_seq
+[]
+--CASE empty_str
+''
+--CASE eq_str
+'='
+--CASE esc
+"a\eb"
+--CASE false
+false
+...
+--CASE float
+1.5
+...
+--CASE float_100
+100.0
+...
+--CASE float_exp
+1.5e-07
+...
+--CASE float_int
+2.0
+...
+--CASE float_neg
+-0.0
+...
+--CASE float_small
+0.001
+...
+--CASE float_tenth
+0.1
+...
+--CASE float_zero
+0.0
+...
+--CASE gt
+'>x'
+--CASE hash_end
+x#
+...
+--CASE hash_space
+'a # b'
+--CASE int
+42
+...
+--CASE int_str
+'123'
+--CASE key_sort
+.: 6
+M: 3
+_x: 5
+a: 2
+b: 1
+z: 4
+--CASE leading_space
+' lead'
+--CASE list_in_map
+cmd:
+- echo
+- hello
+--CASE long_double
+- "a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\t\
+  b a\tb a\tb a\tb a\tb "
+--CASE long_key
+? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+: 1
+--CASE long_key_nested
+a:
+  ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  : 1
+--CASE long_nospace
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+...
+--CASE long_plain
+word word word word word word word word word word word word word word word word word
+  word word word word word word word word end
+...
+--CASE long_quoted
+'1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5
+  1.5 1.5 1.5 1.5 '
+--CASE long_quoted_seq
+- '1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5
+  1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 '
+--CASE long_quoted_words
+this is a long single quoted string that has enough words to wrap over the width limit
+...
+--CASE long_seq_items
+cmd:
+- 'word word word word word word word word word word word word word word word word
+  word word word word word word word word word word word word word word '
+- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+- short
+--CASE ls
+"a\Lb"
+--CASE map_in_seq_in_map
+a:
+- b:
+    c: 1
+--CASE merge_str
+'<<'
+--CASE mount
+./html:/usr/share/nginx/html:ro
+...
+--CASE multi
+'a
+
+
+  b'
+--CASE nbsp
+"\_"
+--CASE neg
+-7
+...
+--CASE nel
+"a\Nb"
+--CASE nested
+a:
+  b:
+    c:
+    - 1
+    - 2
+    - d: []
+--CASE nested_wrap
+a:
+  b:
+    c: word word word word word word word word word word word word word word word
+      word word word word word word word word word word end
+--CASE newline
+'a
+
+  b'
+--CASE nul
+"a\0b"
+--CASE null
+null
+...
+--CASE octalish_str
+'0b101'
+--CASE one_space
+' '
+--CASE only_spaces
+'   '
+--CASE percent
+'%YAML'
+--CASE pipe
+'|x'
+--CASE plain
+secret
+...
+--CASE port
+8080:80
+...
+--CASE question_space
+'? x'
+--CASE question_str
+'?'
+--CASE quote_double
+say "hi"
+...
+--CASE quote_single
+it's
+...
+--CASE quoted_key
+'123': 3
+'a: b': 1
+'true': 2
+--CASE seq_in_seq_in_map
+a:
+- - x
+--CASE seq_of_map
+- f: 1
+  g:
+    h: 2
+- i:
+  - 3
+  - 4
+--CASE seq_of_seq
+- - 1
+  - 2
+- - 3
+  - - 4
+    - 5
+--CASE seq_wrap
+- word word word word word word word word word word word word word word word word
+  word word word word word word word word word end
+--CASE sexagesimal_str
+'12:30'
+--CASE single_dash
+'-'
+--CASE star_str
+x*
+...
+--CASE tab
+"a\tb"
+--CASE three_dashes
+'---'
+--CASE three_dots
+'...'
+--CASE tilde_str
+'~'
+--CASE trailing_space
+'trail '
+--CASE ts_str
+'2024-01-01 10:00:00'
+--CASE under_int_str
+'1_000'
+--CASE unicode
+"h\xE9llo"
+--CASE wrap_boundary
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx y
+...
+--CASE wrap_boundary2
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yy
+...
+--CASE zero
+0
+...

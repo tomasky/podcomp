@@ -1,0 +1,184 @@
+amp: '&anchor'
+at_str: '@x'
+backslash: a\b
+backtick_str: '`x'
+bang: '!tag'
+bmp_high: "\uFFFF"
+bom: "\uFEFF"
+bool: true
+bool_str: 'true'
+both_quotes: a'b"c
+brace_str: a{b}
+bracket_str: a[b]
+colon_nospace: x:y
+colon_space: 'a: b'
+comma_str: a,b
+cr: "a\rb"
+dash_end: x-
+dash_space: '- x'
+date_str: '2024-01-01'
+dbl_space: a  b
+deep:
+  a:
+    b:
+      c:
+        d:
+          e:
+            f:
+            - 1
+            - 2
+            - 3
+deep_list:
+  a:
+  - - 1
+del: "a\x7Fb"
+dollar: $HOME
+dot_inf_str: '.inf'
+emoji: "a\U0001F600b"
+empties:
+  a: null
+  b: []
+  c: {}
+  d: ''
+empty_in_seq:
+- []
+- {}
+- ''
+empty_map: {}
+empty_seq: []
+empty_str: ''
+eq_str: '='
+esc: "a\eb"
+'false': false
+float: 1.5
+float_100: 100.0
+float_exp: 1.5e-07
+float_int: 2.0
+float_neg: -0.0
+float_small: 0.001
+float_tenth: 0.1
+float_zero: 0.0
+gt: '>x'
+hash_end: x#
+hash_space: 'a # b'
+int: 42
+int_str: '123'
+key_sort:
+  .: 6
+  M: 3
+  _x: 5
+  a: 2
+  b: 1
+  z: 4
+leading_space: ' lead'
+list_in_map:
+  cmd:
+  - echo
+  - hello
+long_double:
+- "a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\tb a\t\
+  b a\tb a\tb a\tb a\tb "
+long_key:
+  ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  : 1
+long_key_nested:
+  a:
+    ? kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+    : 1
+long_nospace: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+long_plain: word word word word word word word word word word word word word word
+  word word word word word word word word word word word end
+long_quoted: '1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5
+  1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 '
+long_quoted_seq:
+- '1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5
+  1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 '
+long_quoted_words: this is a long single quoted string that has enough words to wrap
+  over the width limit
+long_seq_items:
+  cmd:
+  - 'word word word word word word word word word word word word word word word word
+    word word word word word word word word word word word word word word '
+  - xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  - short
+ls: "a\Lb"
+map_in_seq_in_map:
+  a:
+  - b:
+      c: 1
+merge_str: '<<'
+mount: ./html:/usr/share/nginx/html:ro
+multi: 'a
+
+
+  b'
+nbsp: "\_"
+neg: -7
+nel: "a\Nb"
+nested:
+  a:
+    b:
+      c:
+      - 1
+      - 2
+      - d: []
+nested_wrap:
+  a:
+    b:
+      c: word word word word word word word word word word word word word word word
+        word word word word word word word word word word end
+newline: 'a
+
+  b'
+nul: "a\0b"
+'null': null
+octalish_str: '0b101'
+one_space: ' '
+only_spaces: '   '
+percent: '%YAML'
+pipe: '|x'
+plain: secret
+port: 8080:80
+question_space: '? x'
+question_str: '?'
+quote_double: say "hi"
+quote_single: it's
+quoted_key:
+  '123': 3
+  'a: b': 1
+  'true': 2
+seq_in_seq_in_map:
+  a:
+  - - x
+seq_of_map:
+- f: 1
+  g:
+    h: 2
+- i:
+  - 3
+  - 4
+seq_of_seq:
+- - 1
+  - 2
+- - 3
+  - - 4
+    - 5
+seq_wrap:
+- word word word word word word word word word word word word word word word word
+  word word word word word word word word word end
+sexagesimal_str: '12:30'
+single_dash: '-'
+star_str: x*
+tab: "a\tb"
+three_dashes: '---'
+three_dots: '...'
+tilde_str: '~'
+trailing_space: 'trail '
+ts_str: '2024-01-01 10:00:00'
+under_int_str: '1_000'
+unicode: "h\xE9llo"
+wrap_boundary: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  y
+wrap_boundary2: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  yy
+zero: 0

@@ -63,6 +63,15 @@ jobs:
       - name: Test
         run: moon test --target native
 
+      # `y_dump` has to reproduce `yaml.safe_dump` byte for byte, and the
+      # fixtures the MoonBit test replays are generated from PyYAML. Recompute
+      # them here so they cannot drift from the reference unnoticed.
+      - name: YAML dump fixtures match PyYAML
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-yaml
+          python3 scripts/check-yaml-dump.py --check
+
       - name: Build the executable
         run: moon build --target native
 
