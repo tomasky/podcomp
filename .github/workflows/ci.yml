@@ -17,18 +17,9 @@ jobs:
       - uses: actions/checkout@v5
 
       # The version is written down three times. Nothing else notices when the
-      # copies drift, and a stale one ships in the release assets, so compare
-      # them with plain `sed` (no toolchain or Node needed).
+      # copies drift, and a stale one ships in the release assets.
       - name: Versions agree
-        run: |
-          set -eu
-          mod="$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' moon.mod)"
-          src="$(sed -n 's/^pub let version : String = "\(.*\)"/\1/p' podcomp.mbt)"
-          npm="$(sed -n 's/^[[:space:]]*"version": "\([^"]*\)".*/\1/p' npmjs/package.json)"
-          printf 'moon.mod=%s source=%s npm=%s\n' "$mod" "$src" "$npm"
-          test -n "$mod"
-          test "$mod" = "$src"
-          test "$mod" = "$npm"
+        run: ./scripts/check-version.sh
 
       - name: Install MoonBit
         run: |

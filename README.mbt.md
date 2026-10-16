@@ -135,7 +135,18 @@ moon build --target native --release
 
 Releases are cut by pushing a `v*` tag; `.github/workflows/release.yml` builds
 static musl binaries for Linux and a native binary for macOS, attaches them to
-the GitHub Release, and publishes the npm launcher.
+the GitHub Release, and publishes the npm launcher. The tag has to match the
+version in the sources.
+
+The version is written down in `moon.mod` (the module), `podcomp.mbt` (what
+`podcomp --version` prints) and `npmjs/package.json` (what the npm launcher
+downloads). `scripts/check-version.sh` fails when the copies disagree, so bump
+them together:
+
+```sh
+scripts/bump-version.sh 0.2.0
+scripts/bump-version.sh --bump patch
+```
 
 ## License
 

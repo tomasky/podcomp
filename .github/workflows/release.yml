@@ -45,6 +45,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # A tag that disagrees with the sources would ship a binary whose
+      # `--version` lies and an npm package that downloads the wrong asset, so
+      # check before spending a runner on the build.
+      - name: Check the version matches the tag
+        run: |
+          set -eu
+          tag="${{ inputs.tag }}"
+          if [ -z "$tag" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+          fi
+          ./scripts/check-version.sh "$tag"
+
       - name: Install MoonBit
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
@@ -178,17 +190,8 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - name: Check the package version matches the release
-        working-directory: npmjs
-        run: |
-          set -eu
-          WANT="${{ needs.release.outputs.tag }}"
-          WANT="${WANT#v}"
-          HAVE="$(node -p "require('./package.json').version")"
-          if [ "$WANT" != "$HAVE" ]; then
-            echo "::error::npmjs/package.json is $HAVE but the release tag is $WANT"
-            exit 1
-          fi
+      - name: Check the version matches the release
+        run: ./scripts/check-version.sh "${{ needs.release.outputs.tag }}"
 
       - name: Publish
         working-directory: npmjs
