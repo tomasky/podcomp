@@ -404,6 +404,84 @@ async fn do_build(
 }
 
 ///|
+/// A container that already exists for this project, as reported by
+/// `podman ps -a`.
+priv struct ExistingContainer {
+  service : String
+  config_hash : String
+  image_id : String
+}
+
+///|
+/// Containers that already exist for this project, keyed by name.
+///
+/// The reference asks podman for JSON; a tab-separated format string carries
+/// the same fields without pulling in a JSON dependency. When `ps` fails the
+/// map is empty, which means "create everything" — the behaviour before this
+/// check existed.
+async fn existing_containers(
+  compose : Compose,
+  podman : Podman,
+) -> Map[String, ExistingContainer] {
+  let out : Map[String, ExistingContainer] = Map([])
+  let format = "{{.Names}}\t{{.Label \"io.podman.compose.service\"}}\t{{.Label \"io.podman.compose.config-hash\"}}\t{{.ImageID}}"
+  let text = podman_try_output(podman, "ps", [
+    "--filter",
+    "label=io.podman.compose.project=" + compose.project_name,
+    "-a",
+    "--format",
+    format,
+  ])
+  match text {
+    None => ()
+    Some(raw) =>
+      for line in raw.split("\n") {
+        let fields = line.to_owned().split("\t").to_array()
+        if fields.length() < 4 {
+          continue
+        }
+        let name = fields[0].to_owned()
+        if name.length() == 0 {
+          continue
+        }
+        out[name] = {
+          service: fields[1].to_owned(),
+          config_hash: fields[2].to_owned(),
+          image_id: fields[3].trim().to_owned(),
+        }
+      }
+  }
+  out
+}
+
+///|
+/// The `podman stop` timeout for a container: `--timeout`, else the service's
+/// `stop_grace_period`, else 10 seconds, as in the reference.
+fn stop_timeout_args(cnt : @yaml.Yaml, args : CommandArgs) -> Array[String] {
+  match args.timeout {
+    Some(t) => ["-t", t.to_string()]
+    None =>
+      match y_get(cnt, "stop_grace_period").bind(y_str) {
+        Some(s) =>
+          match str_to_seconds(s) {
+            Some(seconds) => ["-t", seconds.to_string()]
+            None => ["-t", "10"]
+          }
+        None => ["-t", "10"]
+      }
+  }
+}
+
+///|
+/// The service's `image`, when it has one.
+fn service_image(compose : Compose, service : String) -> String? {
+  match compose.services.get(service) {
+    Some(s) => y_get(s, "image").bind(y_str)
+    None => None
+  }
+}
+
+///|
 /// `podcomp up`
 pub async fn cmd_up(
   compose : Compose,
@@ -412,6 +490,12 @@ pub async fn cmd_up(
 ) -> Int32 raise Error {
   assert_services(compose, args.services)
   let excluded = get_excluded(compose, args.services, true, false)
+  if args.force_recreate && args.no_recreate {
+    eprintln(
+      "podcomp: cannot use --force-recreate and --no-recreate at the same time",
+    )
+    return 1
+  }
   if !args.no_build {
     let build_services : Array[String] = []
     for cnt in compose.containers {
@@ -453,6 +537,86 @@ pub async fn cmd_up(
       return pull_code
     }
   }
+  // Containers that already exist are reused; the reference only recreates
+  // them when asked to, when their configuration changed, or when their image
+  // changed. Without this, a second `up` would fail with "the container name
+  // ... is already in use" instead of starting the existing container.
+  let existing = existing_containers(compose, podman)
+  let recreate : Map[String, Unit] = Map([])
+  if existing.length() > 0 && !args.no_recreate {
+    // Local image ids, one `inspect` per distinct image reference.
+    let image_ids : Map[String, String] = Map([])
+    for entry in existing {
+      let c = entry.1
+      if excluded.contains(c.service) || !compose.services.contains(c.service) {
+        continue
+      }
+      match service_image(compose, c.service) {
+        Some(image) =>
+          if !image_ids.contains(image) {
+            match
+              podman_try_output(podman, "inspect", [
+                "-t", "image", "-f", "{{.Id}}", image,
+              ]) {
+              Some(id) => image_ids[image] = id.trim().to_owned()
+              None => ()
+            }
+          }
+        None => ()
+      }
+    }
+    for entry in existing {
+      let c = entry.1
+      if excluded.contains(c.service) || !compose.services.contains(c.service) {
+        continue
+      }
+      let force_this = args.force_recreate &&
+        (args.services.length() == 0 || args.services.contains(c.service))
+      let image_changed = match service_image(compose, c.service) {
+        Some(image) =>
+          match image_ids.get(image) {
+            Some(local_id) => local_id.length() > 0 && local_id != c.image_id
+            None => false
+          }
+        None => false
+      }
+      let hash_changed = match compose.services.get(c.service) {
+        Some(service) => c.config_hash != config_hash(compose, service)
+        None => false
+      }
+      if force_this || image_changed || hash_changed {
+        recreate[c.service] = ()
+        // A running dependent cannot stay attached to a container that is
+        // about to be replaced, so recreate those too.
+        for dep in service_dependents(compose, c.service) {
+          recreate[dep] = ()
+        }
+      }
+    }
+  }
+  if recreate.length() > 0 {
+    let stale : Array[String] = []
+    for cnt in compose.containers.rev() {
+      let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
+      let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
+      if recreate.contains(service) &&
+        !excluded.contains(service) &&
+        existing.contains(name) {
+        stale.push(name)
+      }
+    }
+    for cnt in compose.containers.rev() {
+      let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
+      if stale.contains(name) {
+        ignore(
+          podman_run(podman, "stop", stop_timeout_args(cnt, args) + [name]),
+        )
+      }
+    }
+    for name in stale {
+      ignore(podman_run(podman, "rm", [name]))
+    }
+  }
   create_pods(compose, podman)
   // Resolve the containers that take part once, then ensure the networks and
   // named volumes they share exist with one probe per distinct name.
@@ -466,6 +630,11 @@ pub async fn cmd_up(
   assert_networks_and_volumes(compose, podman, targets)
   let mut status = 0
   for cnt in targets {
+    let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
+    let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
+    if existing.contains(name) && !recreate.contains(service) {
+      continue
+    }
     let cargs = container_to_args(compose, cnt, false, args.no_deps)
     let code = podman_run(podman, "create", cargs)
     if code != 0 {
@@ -544,30 +713,26 @@ pub async fn cmd_down(
 ) -> Int32 {
   let excluded = get_excluded(compose, args.services, false, true)
   let mut status = 0
-  let mut names : Array[String] = []
-  for cnt in compose.containers {
+  // Stop dependents before their dependencies, the way the reference reverses
+  // the container list; then remove them all.
+  let containers = compose.containers.rev()
+  for cnt in containers {
     let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
-    if !excluded.contains(service) {
-      names.push(y_str_or(y_get(cnt, "name").unwrap_or(y_null()), ""))
+    if excluded.contains(service) {
+      continue
     }
-  }
-  names = reversed(names)
-  for name in names {
-    let cargs : Array[String] = []
-    match args.timeout {
-      Some(t) => {
-        cargs.push("-t")
-        cargs.push(t.to_string())
-      }
-      None => ()
-    }
-    cargs.push(name)
-    let code = podman_run(podman, "stop", cargs)
+    let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
+    let code = podman_run(podman, "stop", stop_timeout_args(cnt, args) + [name])
     if code != 0 {
       status = code
     }
   }
-  for name in names {
+  for cnt in containers {
+    let service = y_str_or(y_get(cnt, "_service").unwrap_or(y_null()), "")
+    if excluded.contains(service) {
+      continue
+    }
+    let name = y_str_or(y_get(cnt, "name").unwrap_or(y_null()), "")
     ignore(podman_run(podman, "rm", [name]))
   }
   if args.volumes {
