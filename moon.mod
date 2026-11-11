@@ -8,7 +8,7 @@
 
 name = "kupas/podcomp"
 
-version = "0.1.5"
+version = "0.1.6"
 
 readme = "README.mbt.md"
 
@@ -30,7 +30,7 @@ description = "A Compose Spec implementation that runs on Podman, written in Moo
 preferred_target = "native"
 
 import {
-  "moonbit-community/yaml@0.0.7",
-  "moonbitlang/async@0.22.4",
-  "moonbitlang/x@0.5.5",
+  "moonbit-community/yaml@0.0.8",
+  "moonbitlang/async@0.22.9",
+  "moonbitlang/x@0.5.7",
 }

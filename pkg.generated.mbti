@@ -14,39 +14,39 @@ pub fn ascii_lower(String) -> String
 
 pub async fn assert_networks_and_volumes(Compose, Podman, Array[@yaml.Yaml]) -> Unit
 
-pub async fn cmd_build(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_build(Compose, Podman, CommandArgs) -> Int32
 
 pub fn cmd_config(Compose, CommandArgs) -> Unit
 
-pub async fn cmd_down(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_down(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_exec(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_exec(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_images(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_images(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_kill(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_kill(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_logs(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_logs(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_pause_unpause(Compose, Podman, CommandArgs, String) -> Int
+pub async fn cmd_pause_unpause(Compose, Podman, CommandArgs, String) -> Int32
 
-pub async fn cmd_port(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_port(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_ps(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_ps(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_pull(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_pull(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_restart(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_restart(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_rm(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_rm(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_run(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_run(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_start(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_start(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_stop(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_stop(Compose, Podman, CommandArgs) -> Int32
 
-pub async fn cmd_up(Compose, Podman, CommandArgs) -> Int
+pub async fn cmd_up(Compose, Podman, CommandArgs) -> Int32
 
 pub async fn cmd_version(Podman, CommandArgs) -> Unit
 
@@ -128,7 +128,7 @@ pub async fn podman_available(Podman) -> Bool
 
 pub async fn podman_output(Podman, String, Array[String]) -> String
 
-pub async fn podman_run(Podman, String, Array[String]) -> Int
+pub async fn podman_run(Podman, String, Array[String]) -> Int32
 
 pub async fn podman_try_output(Podman, String, Array[String]) -> String?
 
@@ -152,9 +152,9 @@ pub fn short_mount_target(String) -> String?
 
 pub fn simple_hash(String) -> String
 
-pub fn str_to_seconds(String) -> Int?
+pub fn str_to_seconds(String) -> Int32?
 
-pub fn try_int_str(String) -> Int?
+pub fn try_int_str(String) -> Int32?
 
 pub let version : String
 
@@ -178,9 +178,9 @@ pub fn y_env_list(@yaml.Yaml) -> Array[String]
 
 pub fn y_get(@yaml.Yaml, String) -> @yaml.Yaml?
 
-pub fn y_int(@yaml.Yaml) -> Int?
+pub fn y_int(@yaml.Yaml) -> Int32?
 
-pub fn y_int_v(Int) -> @yaml.Yaml
+pub fn y_int_v(Int32) -> @yaml.Yaml
 
 pub fn y_list(@yaml.Yaml) -> Array[@yaml.Yaml]
 
@@ -218,7 +218,7 @@ pub struct CommandArgs {
   mut volumes : Bool
   mut remove_orphans : Bool
   mut rmi : String?
-  mut timeout : Int?
+  mut timeout : Int32?
   mut follow : Bool
   mut tail : String?
   mut since : String?
@@ -232,15 +232,15 @@ pub struct CommandArgs {
   mut short : Bool
   mut signal : String?
   mut all : Bool
-  mut index : Int
+  mut index : Int32
   mut protocol : String
-  mut private_port : Int
+  mut private_port : Int32
   mut no_cache : Bool
   mut pull : String?
   build_arg : Array[String]
   mut quiet_pull : Bool
   mut wait : Bool
-  mut wait_timeout : Int?
+  mut wait_timeout : Int32?
   mut name : String?
   mut entrypoint : String?
   env : Array[String]
@@ -273,6 +273,7 @@ pub struct Compose {
   mut environ : Map[String, String]
   mut services : Map[String, @yaml.Yaml]
   mut deps : Map[String, Array[String]]
+  mut dependents : Map[String, Array[String]]
   mut container_names_by_service : Map[String, Array[String]]
   mut containers : Array[@yaml.Yaml]
   mut container_by_name : Map[String, @yaml.Yaml]

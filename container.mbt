@@ -335,6 +335,15 @@ pub fn container_to_args(
     ) {
     args.push("--no-hosts")
   }
+  match y_get(cnt, "x-podman.passwd") {
+    Some(passwd) => {
+      // `--passwd` defaults to true, so only an explicit false turns it off.
+      let enabled = y_bool(passwd).unwrap_or(true)
+      let flag = if enabled { "true" } else { "false" }
+      args.push("--passwd=" + flag)
+    }
+    None => ()
+  }
   // The image, then the command.
   match y_get(cnt, "x-podman.rootfs") {
     Some(rootfs) =>

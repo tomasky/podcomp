@@ -20,6 +20,7 @@ pub struct Compose {
   mut environ : Map[String, String]
   mut services : Map[String, @yaml.Yaml]
   mut deps : Map[String, Array[String]]
+  mut dependents : Map[String, Array[String]]
   mut container_names_by_service : Map[String, Array[String]]
   mut containers : Array[@yaml.Yaml]
   mut container_by_name : Map[String, @yaml.Yaml]
@@ -46,6 +47,7 @@ pub fn new_compose() -> Compose {
     environ: Map([]),
     services: Map([]),
     deps: Map([]),
+    dependents: Map([]),
     container_names_by_service: Map([]),
     containers: [],
     container_by_name: Map([]),
@@ -433,7 +435,8 @@ fn resolve_profiles(
 }
 
 ///|
-/// Transitive dependencies of every service, following `depends_on`.
+/// Transitive dependencies of every service, following `depends_on`,
+/// `extends` and `links`, the way the reference's `flat_deps` does.
 fn compute_deps(
   services : Map[String, @yaml.Yaml],
 ) -> Map[String, Array[String]] {
@@ -452,6 +455,28 @@ fn compute_deps(
         }
       None => ()
     }
+    // `extends` makes the base service a dependency too.
+    match y_get(service, "extends") {
+      Some(ext) =>
+        match y_get(ext, "service").bind(y_str) {
+          Some(base) =>
+            if base != name && !deps.contains(base) {
+              deps.push(base)
+            }
+          None => ()
+        }
+      None => ()
+    }
+    // `links` names the service to link to, optionally with an alias.
+    for link in y_list_str(y_get(service, "links").unwrap_or(y_null())) {
+      let target = match link.split_once(":") {
+        Some(pair) => pair.0.to_owned()
+        None => link
+      }
+      if target != name && !deps.contains(target) {
+        deps.push(target)
+      }
+    }
     direct[name] = deps
   }
   let result : Map[String, Array[String]] = Map([])
@@ -464,6 +489,8 @@ fn compute_deps(
 
 ///|
 /// Depth-first transitive closure with a visited set, so a cycle terminates.
+/// The start service never appears in its own list, so `A depends on A` (or a
+/// cycle that leads back to `A`) does not make `A` wait on itself.
 fn transitive_deps(
   name : String,
   direct : Map[String, Array[String]],
@@ -471,6 +498,7 @@ fn transitive_deps(
 ) -> Array[String] {
   let out : Array[String] = []
   let stack : Array[String] = [name]
+  seen[name] = ()
   while stack.length() > 0 {
     let n = stack.pop().unwrap()
     for dep in direct.get(n).unwrap_or([]) {
@@ -478,6 +506,26 @@ fn transitive_deps(
         seen[dep] = ()
         out.push(dep)
         stack.push(dep)
+      }
+    }
+  }
+  out
+}
+
+///|
+/// The reverse of `deps`: which services (transitively) depend on each service.
+/// Computed once so `up` does not rescan every service per container.
+fn compute_dependents(
+  services : Map[String, @yaml.Yaml],
+  deps : Map[String, Array[String]],
+) -> Map[String, Array[String]] {
+  let out : Map[String, Array[String]] = Map([])
+  for entry in services {
+    let (name, _) = entry
+    for dep in deps.get(name).unwrap_or([]) {
+      match out.get(dep) {
+        Some(list) => if !list.contains(name) { list.push(name) }
+        None => out[dep] = [name]
       }
     }
   }
@@ -758,6 +806,7 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
   }
   let deps = compute_deps(services)
   compose.deps = deps
+  compose.dependents = compute_dependents(services, deps)
   let names_by_service : Map[String, Array[String]] = Map([])
   let containers : Array[@yaml.Yaml] = []
   let base_labels = compose_labels(compose)
@@ -767,6 +816,8 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
     // The config hash depends only on the service, not on the replica number,
     // so compute it once instead of serializing the service per replica.
     let service_hash = config_hash(compose, service)
+    // One deep clone per service; every replica shares its values.
+    let cloned_service = y_clone(service)
     let names : Array[String] = []
     for num in 1..<=replicas {
       let name0 = format_name(compose, [service_name, num.to_string()])
@@ -785,7 +836,7 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
       names.push(name)
       containers.push(
         make_container(
-          compose, service_name, service, name, num, pod_name, deps, base_labels,
+          compose, service_name, cloned_service, name, num, pod_name, deps, base_labels,
           service_hash,
         ),
       )
@@ -793,17 +844,17 @@ pub async fn load_compose(g : GlobalOptions) -> Compose raise Error {
     names_by_service[service_name] = names
   }
   compose.container_names_by_service = names_by_service
-  // Create dependencies before the services that need them.
+  // Create dependencies before the services that need them, the way the
+  // reference sorts by the length of the transitive `_deps`. The key is read
+  // once per container instead of twice per comparison.
+  let depth : Map[String, Int32] = Map([])
+  for entry in deps {
+    depth[entry.0] = entry.1.length()
+  }
   containers.sort_by(fn(a, b) {
-    let da = deps
-      .get(y_str_or(y_get(a, "_service").unwrap_or(y_null()), ""))
-      .unwrap_or([])
-      .length()
-    let db = deps
-      .get(y_str_or(y_get(b, "_service").unwrap_or(y_null()), ""))
-      .unwrap_or([])
-      .length()
-    da - db
+    let sa = y_str_or(y_get(a, "_service").unwrap_or(y_null()), "")
+    let sb = y_str_or(y_get(b, "_service").unwrap_or(y_null()), "")
+    depth.get(sa).unwrap_or(0) - depth.get(sb).unwrap_or(0)
   })
   compose.containers = containers
   let by_name : Map[String, @yaml.Yaml] = Map([])
@@ -861,10 +912,13 @@ fn make_container(
   config_hash_value : String,
 ) -> @yaml.Yaml {
   let out : Map[String, @yaml.Yaml] = Map([])
+  // `service` is already a private clone made once per service in the caller;
+  // sharing its values across the replicas of one service is safe because
+  // nothing mutates them, and it skips a deep clone per replica.
   match y_map(service) {
     Some(sm) =>
       for entry in sm {
-        out[entry.0] = y_clone(entry.1)
+        out[entry.0] = entry.1
       }
     None => ()
   }
@@ -880,7 +934,13 @@ fn make_container(
   if !out.contains("image") {
     out["image"] = y_str_v(format_name(compose, [service_name]))
   }
-  let labels = y_list(out.get("labels").unwrap_or(y_null()))
+  // A fresh array per container: `y_list` hands back the service's own array,
+  // and pushing into it would leak this container's labels into the service
+  // and into the other replicas.
+  let labels : Array[@yaml.Yaml] = []
+  for item in y_list(out.get("labels").unwrap_or(y_null())) {
+    labels.push(item)
+  }
   for label in base_labels {
     labels.push(y_str_v(label))
   }

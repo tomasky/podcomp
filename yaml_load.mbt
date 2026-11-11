@@ -29,7 +29,7 @@
 pub fn load_yaml_documents(
   source : StringView,
 ) -> Array[@yaml.Yaml] raise Error {
-  let parser = @yaml.Parser::new(source)
+  let parser = @yaml.Parser::Parser(source)
   let receiver : PyYamlConstructor = {
     docs: [],
     stack: [],

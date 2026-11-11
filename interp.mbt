@@ -213,15 +213,28 @@ pub fn rec_subs(
       }
       y_arr_v(out)
     }
-    @yaml.Yaml::Map(m) => {
-      let scope = service_scope(m, env)
-      let out : Map[String, @yaml.Yaml] = Map([])
-      for entry in m {
-        let (k, value) = entry
-        out[interp_str(k, scope)] = rec_subs(value, scope)
+    @yaml.Yaml::Map(m) =>
+      // Only a mapping that has its own `environment` widens the scope; the
+      // others substitute with the ambient environment and skip the copy.
+      match m.get("environment") {
+        Some(_) => {
+          let scope = service_scope(m, env)
+          let out : Map[String, @yaml.Yaml] = Map([])
+          for entry in m {
+            let (k, value) = entry
+            out[interp_str(k, scope)] = rec_subs(value, scope)
+          }
+          y_map_v(out)
+        }
+        None => {
+          let out : Map[String, @yaml.Yaml] = Map([])
+          for entry in m {
+            let (k, value) = entry
+            out[interp_str(k, env)] = rec_subs(value, env)
+          }
+          y_map_v(out)
+        }
       }
-      y_map_v(out)
-    }
     _ => v
   }
 }

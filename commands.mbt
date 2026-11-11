@@ -43,15 +43,10 @@ fn service_deps(compose : Compose, name : String) -> Array[String] {
 }
 
 ///|
-/// Services that (transitively) depend on `name`.
+/// Services that (transitively) depend on `name`, from the map built once when
+/// the project was loaded.
 fn service_dependents(compose : Compose, name : String) -> Array[String] {
-  let out : Array[String] = []
-  for entry in compose.services {
-    if service_deps(compose, entry.0).contains(name) {
-      out.push(entry.0)
-    }
-  }
-  out
+  compose.dependents.get(name).unwrap_or([])
 }
 
 ///|
@@ -635,6 +630,14 @@ pub async fn cmd_up(
     if existing.contains(name) && !recreate.contains(service) {
       continue
     }
+    // `--no-hosts` reaches podman through the container's own extension field,
+    // the way the reference writes it before building the arguments.
+    if args.no_hosts {
+      match y_map(cnt) {
+        Some(cm) => cm["x-podman.no_hosts"] = y_bool_v(true)
+        None => ()
+      }
+    }
     let cargs = container_to_args(compose, cnt, false, args.no_deps)
     let code = podman_run(podman, "create", cargs)
     if code != 0 {
@@ -658,7 +661,7 @@ pub async fn cmd_up(
     return status
   }
   // Attached: start every container with `-a` concurrently.
-  let codes : Array[Int32] = []
+  let codes : Array[(String, Int32)] = []
   let names : Array[String] = []
   for cnt in targets {
     names.push(y_str_or(y_get(cnt, "name").unwrap_or(y_null()), ""))
@@ -667,16 +670,35 @@ pub async fn cmd_up(
     for name in names {
       group.spawn_bg(no_wait=true, () => {
         let code = podman_run(podman, "start", ["-a", name])
-        codes.push(code)
+        codes.push((name, code))
       })
     }
   })
-  for code in codes {
-    if code != 0 {
-      status = code
+  // `--exit-code-from SERVICE` makes the exit code of that service the command's
+  // own, and implies `--abort-on-container-exit` in the reference.
+  match args.exit_code_from {
+    Some(watch) => {
+      let mut status = 1
+      for entry in codes {
+        let (name, code) = entry
+        if compose.container_names_by_service
+          .get(watch)
+          .unwrap_or([])
+          .contains(name) {
+          status = code
+        }
+      }
+      status
+    }
+    None => {
+      for entry in codes {
+        if entry.1 != 0 {
+          status = entry.1
+        }
+      }
+      status
     }
   }
-  status
 }
 
 ///|
@@ -1065,7 +1087,10 @@ pub async fn cmd_run(
   if names.length() == 0 {
     raise fail("no container for service \{service}")
   }
-  let base = compose.container_by_name.get(names[0]).unwrap_or(y_null())
+  let base = match compose.container_by_name.get(names[0]) {
+    Some(b) => b
+    None => raise fail("no container definition for service \{service}")
+  }
   // One-off containers get a fresh name and command.
   let sm = y_map(y_clone(base)).unwrap()
   let suffix = simple_hash(current_dir() + args.services.join(","))
